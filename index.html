@@ -3,80 +3,117 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>人工無能チャット</title>
+<title>人工無能チャット 改良版</title>
 <style>
-body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#11151c;color:#eef2f7}
-.app{max-width:1100px;margin:auto;min-height:100vh;display:grid;grid-template-columns:260px 1fr}
-aside{background:#181d26;border-right:1px solid #303744;padding:16px}
-main{display:flex;flex-direction:column;min-width:0}
-h1{font-size:20px;margin:0 0 12px}
-small,.muted{color:#9aa6b2}
-.card{background:#202632;border:1px solid #343d4d;border-radius:12px;padding:12px;margin-bottom:12px}
-button,input,select,textarea{font:inherit;border-radius:9px;border:1px solid #3a4354;background:#262d39;color:#eef2f7}
+:root{
+  --bg:#10141b;--panel:#181e28;--panel2:#222a36;--line:#333d4d;
+  --text:#edf2f7;--muted:#9aa7b5;--blue:#2d67ad;--green:#2d7448;--red:#843344;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.app{max-width:1180px;margin:auto;min-height:100vh;display:grid;grid-template-columns:300px 1fr}
+aside{background:var(--panel);border-right:1px solid var(--line);padding:16px;overflow:auto}
+main{min-width:0;display:flex;flex-direction:column;min-height:100vh}
+h1{font-size:21px;margin:0 0 8px}
+h2{font-size:14px;margin:0 0 10px}
+.small{font-size:12px;color:var(--muted);line-height:1.55}
+.card{background:var(--panel2);border:1px solid var(--line);border-radius:13px;padding:12px;margin-bottom:12px}
+label{display:block;font-size:12px;color:var(--muted);margin:8px 0 4px}
+button,input,select,textarea{font:inherit;color:var(--text);background:#28313e;border:1px solid #3b4657;border-radius:9px}
 button{padding:8px 10px;cursor:pointer}
-input,select{width:100%;padding:8px;box-sizing:border-box}
-textarea{width:100%;min-height:56px;padding:10px;resize:vertical;box-sizing:border-box}
-.tabs{display:flex;border-bottom:1px solid #303744;background:#171b22}
+input,select,textarea{width:100%;padding:9px}
+textarea{min-height:58px;resize:vertical}
+.row{display:flex;gap:8px}
+.row>*{flex:1}
+.primary{background:var(--blue)}
+.green{background:var(--green)}
+.red{background:var(--red)}
+.tabs{display:flex;border-bottom:1px solid var(--line);background:#151a22}
 .tabs button{border:0;border-radius:0;background:transparent;padding:13px 18px}
-.tabs button.active{background:#252c38}
+.tabs button.active{background:#252d39}
 .panel{display:none;flex:1;min-height:0}
 .panel.active{display:flex;flex-direction:column}
 .chat{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
-.msg{max-width:78%;padding:10px 12px;border-radius:13px;background:#252c38;border:1px solid #333c4c}
-.msg.user{align-self:flex-end;background:#17426d}
-.meta{font-size:11px;color:#a8b2bf;margin-bottom:4px}
-.system{align-self:center;color:#9aa6b2;font-size:12px}
-.composer{border-top:1px solid #303744;padding:12px;background:#151a21}
-.row{display:flex;gap:8px}
-.row>*{flex:1}
-.agent{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #2d3441}
+.msg{max-width:80%;background:#252d39;border:1px solid #374254;border-radius:13px;padding:10px 12px;line-height:1.5}
+.msg.user{align-self:flex-end;background:#174775}
+.meta{font-size:11px;color:var(--muted);margin-bottom:4px}
+.system{align-self:center;color:var(--muted);font-size:12px;padding:5px 9px;border:1px dashed var(--line);border-radius:999px}
+.composer{padding:12px;border-top:1px solid var(--line);background:#151a22}
+.agent{padding:9px 0;border-bottom:1px solid #303947}
 .agent:last-child{border-bottom:0}
-.primary{background:#2f65a8}
-.green{background:#2f7046}
-.red{background:#7b3040}
-@media(max-width:760px){.app{grid-template-columns:1fr}aside{border-right:0;border-bottom:1px solid #303744}.panel{min-height:65vh}}
+.agent-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.agent-actions{display:flex;gap:5px;margin-top:6px}
+.agent-actions button{font-size:11px;padding:5px 7px}
+.badge{font-size:11px;padding:2px 6px;border-radius:999px;background:#31415a}
+.stat{font-size:11px;color:var(--muted)}
+.toggle{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px}
+.toggle input{width:auto}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.toolbar button{font-size:12px}
+@media(max-width:800px){
+ .app{grid-template-columns:1fr}
+ aside{border-right:0;border-bottom:1px solid var(--line)}
+ main{min-height:72vh}
+}
 </style>
 </head>
 <body>
 <div class="app">
 <aside>
-  <h1>人工無能チャット</h1>
-  <div class="muted" style="font-size:13px;margin-bottom:14px">辞書学習・類似返答・切り貼り生成。賢さは期待するだけ無駄です。</div>
+  <h1>人工無能チャット 改良版</h1>
+  <div class="small">反復地獄を抑えつつ、意味不明な切り貼りは少し残します。完全正常化したら、それはもう人工無能ではありません。</div>
 
   <div class="card">
-    <b>個体追加</b>
-    <input id="name" value="シロ" style="margin-top:8px">
-    <input id="rate" type="range" min="10" max="100" value="50" style="margin-top:8px">
-    <button id="add" class="primary" style="width:100%;margin-top:8px">作成</button>
+    <h2>個体追加</h2>
+    <input id="newName" value="シロ" maxlength="16">
+    <label>発言率 <span id="rateText">50%</span></label>
+    <input id="newRate" type="range" min="5" max="95" value="50">
+    <button id="addAgent" class="primary" style="width:100%;margin-top:8px">作成</button>
   </div>
 
   <div class="card">
-    <b>個体一覧</b>
+    <h2>生成設定</h2>
+    <label>切り貼り率 <span id="remixText">18%</span></label>
+    <input id="remixRate" type="range" min="0" max="60" value="18">
+    <label>直近発言の記憶数 <span id="recentText">8</span></label>
+    <input id="recentLimit" type="range" min="2" max="20" value="8">
+    <label class="toggle"><input id="plazaLearn" type="checkbox" checked> 広場で学習する</label>
+    <label class="toggle"><input id="avoidExact" type="checkbox" checked> 直近と同じ返答を避ける</label>
+  </div>
+
+  <div class="card">
+    <h2>個体一覧</h2>
     <div id="agents"></div>
   </div>
 
   <div class="card">
-    <b>広場自動会話</b>
-    <div class="row" style="margin-top:8px">
+    <h2>自動会話</h2>
+    <div class="row">
       <input id="rounds" type="number" min="1" max="50" value="5">
-      <button id="auto" class="green">開始</button>
+      <button id="autoTalk" class="green">開始</button>
     </div>
   </div>
 
   <div class="card">
-    <button id="save" style="width:100%">保存</button>
-    <button id="reset" class="red" style="width:100%;margin-top:8px">全消去</button>
+    <h2>データ</h2>
+    <div class="row">
+      <button id="exportBtn">書き出し</button>
+      <button id="importBtn">読み込み</button>
+    </div>
+    <button id="resetAll" class="red" style="width:100%;margin-top:8px">全消去</button>
+    <input id="fileInput" type="file" accept=".json" hidden>
   </div>
 </aside>
 
 <main>
   <div class="tabs">
     <button class="active" data-tab="personal">個人チャット</button>
+    <button data-tab="teach">手動で教える</button>
     <button data-tab="plaza">広場</button>
   </div>
 
   <section id="personal" class="panel active">
-    <div style="padding:10px 12px;border-bottom:1px solid #303744">
+    <div style="padding:10px 12px;border-bottom:1px solid var(--line)">
       <select id="personalAgent"></select>
     </div>
     <div id="personalChat" class="chat"></div>
@@ -88,11 +125,31 @@ textarea{width:100%;min-height:56px;padding:10px;resize:vertical;box-sizing:bord
     </div>
   </section>
 
+  <section id="teach" class="panel">
+    <div style="padding:14px;max-width:760px">
+      <div class="card">
+        <h2>正しい受け答えを登録</h2>
+        <select id="teachAgent"></select>
+        <label>入力</label>
+        <textarea id="teachInput" placeholder="例：こんにちは"></textarea>
+        <label>返答</label>
+        <textarea id="teachReply" placeholder="例：こんにちは。今日はどうしましたか？"></textarea>
+        <button id="teachBtn" class="green" style="width:100%;margin-top:8px">この会話を教える</button>
+      </div>
+      <div class="small">ここで教えた内容は重複をまとめて保存します。同じ返答を100回登録して語録独裁国家を作る仕様は廃止しました。</div>
+    </div>
+  </section>
+
   <section id="plaza" class="panel">
     <div id="plazaChat" class="chat"></div>
     <div class="composer">
+      <div class="toolbar">
+        <button data-text="こんにちは">こんにちは</button>
+        <button data-text="今日は何をしていましたか？">今日は何をしていましたか？</button>
+        <button data-text="それはどういう意味ですか？">それはどういう意味ですか？</button>
+      </div>
       <div class="row">
-        <textarea id="plazaInput" placeholder="広場に投稿する"></textarea>
+        <textarea id="plazaInput" placeholder="広場へ投稿する"></textarea>
         <button id="plazaSend" class="primary">送信</button>
       </div>
     </div>
@@ -101,129 +158,337 @@ textarea{width:100%;min-height:56px;padding:10px;resize:vertical;box-sizing:bord
 </div>
 
 <script>
-(function(){
-const KEY="af_chat_v2";
+const KEY="artificialFoolsV3";
+const COLORS=["#79a7ff","#7bd88f","#d49bff","#ffd36e","#ff8b8b","#70d8d8","#ff9fd2"];
+
 function norm(s){return String(s||"").trim().replace(/\s+/g," ")}
-function grams(s){s=norm(s);let a=[];for(let i=0;i<s.length-1;i++)a.push(s.slice(i,i+2));return a}
-function sim(a,b){let A=new Set(grams(a)),B=new Set(grams(b)),n=0;A.forEach(x=>{if(B.has(x))n++});return (2*n)/((A.size+B.size)||1)}
-function pick(a){return a[Math.floor(Math.random()*a.length)]}
-function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-function Agent(name,rate){this.name=name;this.rate=rate;this.pairs={};this.vocab={};this.last=-99}
-Agent.prototype.learn=function(input,reply){
- input=norm(input);reply=norm(reply);if(!input||!reply)return;
- if(!this.pairs[input])this.pairs[input]=[];
- this.pairs[input].push(reply);if(this.pairs[input].length>10)this.pairs[input].shift();
- grams(input+" "+reply).forEach(g=>this.vocab[g]=(this.vocab[g]||0)+1);
-};
-Agent.prototype.fam=function(text){let g=grams(text);if(!g.length)return 0;return g.filter(x=>this.vocab[x]).length/g.length}
-Agent.prototype.reply=function(text){
- text=norm(text);
- if(this.pairs[text]&&this.pairs[text].length)return pick(this.pairs[text]);
- let cand=Object.keys(this.pairs).map(k=>[sim(text,k),k]).filter(x=>x[0]>=.3).sort((a,b)=>b[0]-a[0]).slice(0,4);
- if(cand.length&&Math.random()<.72)return pick(this.pairs[pick(cand)[1]]);
- let all=Object.values(this.pairs).flat();
- if(all.length>=2&&Math.random()<.55){
-   let a=pick(all),b=pick(all),x=Math.max(1,Math.floor(a.length/2)),y=Math.floor(b.length/2);
-   return a.slice(0,x)+b.slice(y);
- }
- if(text.includes("こんにちは"))return "こんにちは";
- if(/[?？]/.test(text))return "わかりません";
- return text;
-};
-Agent.prototype.should=function(text,turn){
- if(turn-this.last<=1)return false;
- return Math.random()<Math.min(.95,this.rate*(.35+1.4*this.fam(text)));
-};
+function rand(a){return a[Math.floor(Math.random()*a.length)]}
+function grams(s,n=2){
+  s=norm(s); if(!s)return [];
+  if(s.length<n)return[s];
+  const a=[]; for(let i=0;i<=s.length-n;i++)a.push(s.slice(i,i+n));
+  return a;
+}
+function similarity(a,b){
+  const A=new Set(grams(a)),B=new Set(grams(b)); let n=0;
+  A.forEach(x=>{if(B.has(x))n++});
+  return (2*n)/((A.size+B.size)||1);
+}
+function esc(s){
+  return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+class Agent{
+  constructor(name,rate=.5,color=rand(COLORS)){
+    this.name=name;this.rate=rate;this.color=color;
+    this.pairs={};          // input -> [{text,count,used}]
+    this.vocab={};
+    this.recent=[];
+    this.personalLog=[];
+  }
+  learnText(text){
+    grams(text).forEach(g=>this.vocab[g]=(this.vocab[g]||0)+1);
+  }
+  learnPair(input,reply){
+    input=norm(input);reply=norm(reply);
+    if(!input||!reply)return;
+    if(!this.pairs[input])this.pairs[input]=[];
+    const found=this.pairs[input].find(x=>x.text===reply);
+    if(found) found.count=Math.min(5,(found.count||1)+1);
+    else this.pairs[input].push({text:reply,count:1,used:0});
+    if(this.pairs[input].length>12){
+      this.pairs[input].sort((a,b)=>(b.count||1)-(a.count||1));
+      this.pairs[input]=this.pairs[input].slice(0,12);
+    }
+    this.learnText(input);this.learnText(reply);
+  }
+  familiarity(text){
+    const g=grams(text);if(!g.length)return 0;
+    return g.filter(x=>this.vocab[x]).length/g.length;
+  }
+  shouldReply(text){
+    return Math.random()<Math.min(.92,this.rate*(.35+1.35*this.familiarity(text)));
+  }
+  candidateScore(c){
+    let score=(c.count||1)/(1+(c.used||0)*.55);
+    const recentIndex=this.recent.lastIndexOf(c.text);
+    if(recentIndex>=0){
+      const distance=this.recent.length-recentIndex;
+      score*=Math.max(.05,distance/(state.settings.recentLimit+1));
+    }
+    return score;
+  }
+  chooseWeighted(candidates){
+    if(!candidates.length)return null;
+    let pool=candidates.slice();
+    if(state.settings.avoidExact){
+      const nonRecent=pool.filter(c=>!this.recent.includes(c.text));
+      if(nonRecent.length)pool=nonRecent;
+    }
+    const weights=pool.map(c=>Math.max(.01,this.candidateScore(c)));
+    let r=Math.random()*weights.reduce((a,b)=>a+b,0);
+    for(let i=0;i<pool.length;i++){r-=weights[i];if(r<=0){pool[i].used=(pool[i].used||0)+1;return pool[i].text}}
+    return pool[pool.length-1].text;
+  }
+  exactReply(text){
+    const arr=this.pairs[norm(text)]||[];
+    return this.chooseWeighted(arr);
+  }
+  similarReply(text){
+    const found=Object.keys(this.pairs)
+      .map(k=>({score:similarity(text,k),key:k}))
+      .filter(x=>x.score>=.34)
+      .sort((a,b)=>b.score-a.score)
+      .slice(0,6);
+    if(!found.length)return null;
+    let all=[];
+    found.forEach(f=>{
+      this.pairs[f.key].forEach(c=>all.push({...c,weight:f.score}));
+    });
+    all=all.map(c=>({...c,count:(c.count||1)*(c.weight||1)}));
+    return this.chooseWeighted(all);
+  }
+  remix(){
+    const corpus=Object.values(this.pairs).flat().map(x=>x.text).filter(x=>x.length>=4);
+    if(corpus.length<3)return null;
+    for(let tries=0;tries<8;tries++){
+      const a=rand(corpus),b=rand(corpus);
+      if(a===b)continue;
+      const cutA=Math.max(1,Math.floor(a.length*(.35+Math.random()*.3)));
+      const cutB=Math.min(b.length-1,Math.floor(b.length*(.35+Math.random()*.3)));
+      const made=norm(a.slice(0,cutA)+b.slice(cutB));
+      if(made.length>=3&&!this.recent.includes(made)&&made!==a&&made!==b)return made;
+    }
+    return null;
+  }
+  remember(text){
+    this.recent.push(text);
+    while(this.recent.length>state.settings.recentLimit)this.recent.shift();
+  }
+  reply(text){
+    let out=this.exactReply(text);
+    if(!out&&Math.random()<.72)out=this.similarReply(text);
+    if(!out&&Math.random()<state.settings.remixRate)out=this.remix();
+    if(!out){
+      if(text.includes("こんにちは"))out="こんにちは";
+      else if(/[?？]/.test(text))out="わかりません";
+      else out=norm(text);
+    }
+    this.remember(out);
+    return out;
+  }
+  distinctCount(){
+    return new Set(Object.values(this.pairs).flat().map(x=>x.text)).size;
+  }
+}
+
+function defaults(){
+  return{
+    turn:0,
+    agents:[
+      new Agent("アオ",.62,COLORS[0]),
+      new Agent("ミドリ",.48,COLORS[1]),
+      new Agent("ムラサキ",.36,COLORS[2])
+    ],
+    plazaLog:[{who:"system",text:"改良版の広場が開きました。反復抑制が有効です。"}],
+    settings:{remixRate:.18,recentLimit:8,plazaLearn:true,avoidExact:true}
+  };
+}
 
 let state;
-function fresh(){
- return {turn:0,agents:[new Agent("アオ",.62),new Agent("ミドリ",.48),new Agent("ムラサキ",.36)],personal:{},plaza:[]};
-}
 function load(){
- try{
-  let x=JSON.parse(localStorage.getItem(KEY));
-  if(!x)throw 0;
-  x.agents=x.agents.map(o=>Object.assign(new Agent(o.name,o.rate),o));
-  state=x;
- }catch(e){state=fresh()}
+  try{
+    const raw=localStorage.getItem(KEY);
+    if(!raw){state=defaults();return}
+    const x=JSON.parse(raw);
+    state=x;
+    state.agents=(x.agents||[]).map(o=>Object.assign(new Agent(o.name,o.rate,o.color),o));
+    state.settings=Object.assign(defaults().settings,x.settings||{});
+    if(!state.agents.length)state=defaults();
+  }catch(e){state=defaults()}
 }
 function save(){localStorage.setItem(KEY,JSON.stringify(state))}
-function addPersonal(name,who,text){if(!state.personal[name])state.personal[name]=[];state.personal[name].push({who,text})}
-function addPlaza(who,text){state.plaza.push({who,text})}
 
 function renderAgents(){
- let r=document.getElementById("agents");r.innerHTML="";
- state.agents.forEach((a,i)=>{
-  let d=document.createElement("div");d.className="agent";
-  d.innerHTML="<span><b>"+esc(a.name)+"</b><br><small>会話例 "+Object.values(a.pairs).flat().length+"</small></span><button>削除</button>";
-  d.querySelector("button").onclick=function(){
-   if(state.agents.length===1){alert("最後の1体まで消してどうするんですか。");return}
-   state.agents.splice(i,1);save();renderAll();
-  };
-  r.appendChild(d);
- });
- let s=document.getElementById("personalAgent"),cur=s.value;s.innerHTML="";
- state.agents.forEach(a=>{let o=document.createElement("option");o.value=a.name;o.textContent=a.name;s.appendChild(o)});
- if(state.agents.some(a=>a.name===cur))s.value=cur;
-}
-function renderPersonal(){
- let name=document.getElementById("personalAgent").value;
- let c=document.getElementById("personalChat");c.innerHTML="";
- (state.personal[name]||[]).forEach(m=>{
-  let d=document.createElement("div");d.className="msg "+(m.who==="あなた"?"user":"");
-  d.innerHTML='<div class="meta">'+esc(m.who)+'</div>'+esc(m.text);c.appendChild(d);
- });
- c.scrollTop=c.scrollHeight;
-}
-function renderPlaza(){
- let c=document.getElementById("plazaChat");c.innerHTML="";
- state.plaza.forEach(m=>{
-  let d=document.createElement("div");
-  d.className=m.who==="system"?"system":"msg "+(m.who==="あなた"?"user":"");
-  d.innerHTML=m.who==="system"?esc(m.text):'<div class="meta">'+esc(m.who)+'</div>'+esc(m.text);
-  c.appendChild(d);
- });
- c.scrollTop=c.scrollHeight;
-}
-function renderAll(){renderAgents();renderPersonal();renderPlaza()}
+  const root=document.getElementById("agents");root.innerHTML="";
+  state.agents.forEach((a,i)=>{
+    const d=document.createElement("div");d.className="agent";
+    d.innerHTML=`<div class="agent-top"><div><b>${esc(a.name)}</b> <span class="badge">${Math.round(a.rate*100)}%</span></div><span class="stat">異なる返答 ${a.distinctCount()}</span></div>
+    <div class="agent-actions"><button data-act="reset">辞書リセット</button><button data-act="delete">削除</button></div>`;
+    d.querySelector('[data-act="reset"]').onclick=()=>{
+      if(confirm(`${a.name} の辞書と個人ログを消しますか？`)){
+        a.pairs={};a.vocab={};a.recent=[];a.personalLog=[];save();renderAll();
+      }
+    };
+    d.querySelector('[data-act="delete"]').onclick=()=>{
+      if(state.agents.length<=1){alert("最後の1体まで消して誰と話すんですか。");return}
+      state.agents.splice(i,1);save();renderAll();
+    };
+    root.appendChild(d);
+  });
 
-document.getElementById("add").onclick=function(){
- let n=norm(document.getElementById("name").value),r=Number(document.getElementById("rate").value)/100;
- if(!n)return;if(state.agents.some(a=>a.name===n)){alert("同名がいます。");return}
- state.agents.push(new Agent(n,r));save();renderAll();
+  ["personalAgent","teachAgent"].forEach(id=>{
+    const sel=document.getElementById(id),old=sel.value;sel.innerHTML="";
+    state.agents.forEach((a,i)=>{
+      const o=document.createElement("option");o.value=i;o.textContent=a.name;sel.appendChild(o);
+    });
+    if(state.agents[old])sel.value=old;
+  });
+}
+
+function renderPersonal(){
+  const i=Number(document.getElementById("personalAgent").value||0);
+  const a=state.agents[i],root=document.getElementById("personalChat");root.innerHTML="";
+  (a?.personalLog||[]).forEach(m=>{
+    const d=document.createElement("div");
+    d.className="msg "+(m.who==="あなた"?"user":"");
+    d.innerHTML=`<div class="meta">${esc(m.who)}</div>${esc(m.text)}`;
+    root.appendChild(d);
+  });
+  root.scrollTop=root.scrollHeight;
+}
+
+function renderPlaza(){
+  const root=document.getElementById("plazaChat");root.innerHTML="";
+  state.plazaLog.forEach(m=>{
+    const d=document.createElement("div");
+    if(m.who==="system"){d.className="system";d.textContent=m.text}
+    else{
+      d.className="msg "+(m.who==="あなた"?"user":"");
+      d.innerHTML=`<div class="meta">${esc(m.who)}</div>${esc(m.text)}`;
+    }
+    root.appendChild(d);
+  });
+  root.scrollTop=root.scrollHeight;
+}
+
+function syncSettings(){
+  document.getElementById("remixRate").value=Math.round(state.settings.remixRate*100);
+  document.getElementById("remixText").textContent=Math.round(state.settings.remixRate*100)+"%";
+  document.getElementById("recentLimit").value=state.settings.recentLimit;
+  document.getElementById("recentText").textContent=state.settings.recentLimit;
+  document.getElementById("plazaLearn").checked=state.settings.plazaLearn;
+  document.getElementById("avoidExact").checked=state.settings.avoidExact;
+}
+function renderAll(){renderAgents();renderPersonal();renderPlaza();syncSettings()}
+
+document.getElementById("newRate").oninput=e=>document.getElementById("rateText").textContent=e.target.value+"%";
+document.getElementById("remixRate").oninput=e=>{
+  state.settings.remixRate=Number(e.target.value)/100;
+  document.getElementById("remixText").textContent=e.target.value+"%";save();
 };
+document.getElementById("recentLimit").oninput=e=>{
+  state.settings.recentLimit=Number(e.target.value);
+  document.getElementById("recentText").textContent=e.target.value;save();
+};
+document.getElementById("plazaLearn").onchange=e=>{state.settings.plazaLearn=e.target.checked;save()};
+document.getElementById("avoidExact").onchange=e=>{state.settings.avoidExact=e.target.checked;save()};
+
+document.getElementById("addAgent").onclick=()=>{
+  const name=norm(document.getElementById("newName").value);
+  const rate=Number(document.getElementById("newRate").value)/100;
+  if(!name)return;
+  if(state.agents.some(a=>a.name===name)){alert("同名個体がいます。量産型にも限度があります。");return}
+  state.agents.push(new Agent(name,rate,COLORS[state.agents.length%COLORS.length]));
+  state.plazaLog.push({who:"system",text:`${name} が広場に参加しました。`});
+  save();renderAll();
+};
+
 document.getElementById("personalAgent").onchange=renderPersonal;
-document.getElementById("personalSend").onclick=function(){
- let name=document.getElementById("personalAgent").value,a=state.agents.find(x=>x.name===name),el=document.getElementById("personalInput"),t=norm(el.value);
- if(!t)return;let r=a.reply(t);a.learn(t,r);addPersonal(name,"あなた",t);addPersonal(name,name,r);el.value="";save();renderPersonal();renderAgents();
+document.getElementById("personalSend").onclick=()=>{
+  const i=Number(document.getElementById("personalAgent").value||0);
+  const a=state.agents[i],el=document.getElementById("personalInput"),text=norm(el.value);
+  if(!a||!text)return;
+  const reply=a.reply(text);
+  a.personalLog.push({who:"あなた",text},{who:a.name,text:reply});
+  a.learnPair(text,reply);
+  el.value="";save();renderAll();
 };
-document.getElementById("plazaSend").onclick=function(){
- let el=document.getElementById("plazaInput"),t=norm(el.value);if(!t)return;state.turn++;addPlaza("あなた",t);let n=0;
- state.agents.slice().sort(()=>Math.random()-.5).forEach(a=>{if(a.should(t,state.turn)){let r=a.reply(t);a.learn(t,r);a.last=state.turn;addPlaza(a.name,r);n++;}});
- if(!n)addPlaza("system","……誰も反応しませんでした。全員沈黙です。");
- el.value="";save();renderAll();
+
+document.getElementById("teachBtn").onclick=()=>{
+  const i=Number(document.getElementById("teachAgent").value||0);
+  const a=state.agents[i];
+  const input=norm(document.getElementById("teachInput").value);
+  const reply=norm(document.getElementById("teachReply").value);
+  if(!a||!input||!reply){alert("入力と返答の両方を書いてください。");return}
+  a.learnPair(input,reply);
+  a.personalLog.push({who:"教師",text:`「${input}」→「${reply}」を登録`});
+  document.getElementById("teachInput").value="";
+  document.getElementById("teachReply").value="";
+  save();renderAll();alert(`${a.name} に教えました。`);
 };
-document.getElementById("auto").onclick=async function(){
- let n=Math.max(1,Math.min(50,Number(document.getElementById("rounds").value)||5));
- for(let i=0;i<n;i++){
-  state.turn++;let a=pick(state.agents),starter=pick(["こんにちは","今日は何をする","猫は好き","よくわかりません"]);
-  let keys=Object.values(a.pairs).flat();if(keys.length)starter=pick(keys);
-  addPlaza(a.name,starter);a.last=state.turn;
-  state.agents.filter(x=>x!==a).forEach(b=>{if(b.should(starter,state.turn)){let r=b.reply(starter);b.learn(starter,r);b.last=state.turn;addPlaza(b.name,r);}});
-  save();renderAll();await new Promise(r=>setTimeout(r,180));
- }
+
+document.getElementById("plazaSend").onclick=()=>{
+  const el=document.getElementById("plazaInput"),text=norm(el.value);if(!text)return;
+  state.turn++;state.plazaLog.push({who:"あなた",text});
+  let count=0;
+  [...state.agents].sort(()=>Math.random()-.5).forEach(a=>{
+    if(a.shouldReply(text)){
+      const reply=a.reply(text);
+      state.plazaLog.push({who:a.name,text:reply});
+      if(state.settings.plazaLearn)a.learnPair(text,reply);
+      count++;
+    }
+  });
+  if(!count)state.plazaLog.push({who:"system",text:"……誰も反応しませんでした。"});
+  el.value="";save();renderAll();
 };
-document.getElementById("save").onclick=function(){save();alert("保存しました。")}
-document.getElementById("reset").onclick=function(){if(confirm("全部消しますか？")){state=fresh();save();renderAll();}}
-document.querySelectorAll(".tabs button").forEach(b=>b.onclick=function(){
- document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));
- document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));
- b.classList.add("active");document.getElementById(b.dataset.tab).classList.add("active");
+
+document.getElementById("autoTalk").onclick=async()=>{
+  const rounds=Math.max(1,Math.min(50,Number(document.getElementById("rounds").value)||5));
+  for(let r=0;r<rounds;r++){
+    state.turn++;
+    const speaker=rand(state.agents);
+    let corpus=Object.values(speaker.pairs).flat().map(x=>x.text);
+    let starter=corpus.length?rand(corpus):rand(["こんにちは","今日は何をしますか","それはどういう意味ですか？"]);
+    if(speaker.recent.includes(starter)&&corpus.length>1){
+      starter=rand(corpus.filter(x=>!speaker.recent.includes(x))||corpus);
+    }
+    speaker.remember(starter);
+    state.plazaLog.push({who:speaker.name,text:starter});
+    [...state.agents].filter(a=>a!==speaker).sort(()=>Math.random()-.5).forEach(a=>{
+      if(a.shouldReply(starter)){
+        const reply=a.reply(starter);
+        state.plazaLog.push({who:a.name,text:reply});
+        if(state.settings.plazaLearn)a.learnPair(starter,reply);
+      }
+    });
+    save();renderPlaza();
+    await new Promise(res=>setTimeout(res,180));
+  }
+  renderAll();
+};
+
+document.querySelectorAll("[data-text]").forEach(b=>b.onclick=()=>document.getElementById("plazaInput").value=b.dataset.text);
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));
+  b.classList.add("active");document.getElementById(b.dataset.tab).classList.add("active");
 });
 document.getElementById("personalInput").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();document.getElementById("personalSend").click()}});
 document.getElementById("plazaInput").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();document.getElementById("plazaSend").click()}});
+
+document.getElementById("exportBtn").onclick=()=>{
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="人工無能データ_v3.json";a.click();URL.revokeObjectURL(a.href);
+};
+document.getElementById("importBtn").onclick=()=>document.getElementById("fileInput").click();
+document.getElementById("fileInput").onchange=async e=>{
+  const file=e.target.files[0];if(!file)return;
+  try{
+    const x=JSON.parse(await file.text());
+    state=x;
+    state.agents=(x.agents||[]).map(o=>Object.assign(new Agent(o.name,o.rate,o.color),o));
+    state.settings=Object.assign(defaults().settings,x.settings||{});
+    if(!state.agents.length)throw new Error();
+    save();renderAll();
+  }catch{alert("読み込みに失敗しました。壊れたJSONまで学習するほど無能ではありません。")}
+};
+document.getElementById("resetAll").onclick=()=>{
+  if(confirm("全個体・全辞書・全ログを消しますか？")){state=defaults();save();renderAll()}
+};
+
 load();renderAll();
-})();
 </script>
 </body>
 </html>
