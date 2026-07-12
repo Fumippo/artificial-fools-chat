@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>人工無能チャット</title>
+<style>
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#11151c;color:#eef2f7}
+.app{max-width:1100px;margin:auto;min-height:100vh;display:grid;grid-template-columns:260px 1fr}
+aside{background:#181d26;border-right:1px solid #303744;padding:16px}
+main{display:flex;flex-direction:column;min-width:0}
+h1{font-size:20px;margin:0 0 12px}
+small,.muted{color:#9aa6b2}
+.card{background:#202632;border:1px solid #343d4d;border-radius:12px;padding:12px;margin-bottom:12px}
+button,input,select,textarea{font:inherit;border-radius:9px;border:1px solid #3a4354;background:#262d39;color:#eef2f7}
+button{padding:8px 10px;cursor:pointer}
+input,select{width:100%;padding:8px;box-sizing:border-box}
+textarea{width:100%;min-height:56px;padding:10px;resize:vertical;box-sizing:border-box}
+.tabs{display:flex;border-bottom:1px solid #303744;background:#171b22}
+.tabs button{border:0;border-radius:0;background:transparent;padding:13px 18px}
+.tabs button.active{background:#252c38}
+.panel{display:none;flex:1;min-height:0}
+.panel.active{display:flex;flex-direction:column}
+.chat{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+.msg{max-width:78%;padding:10px 12px;border-radius:13px;background:#252c38;border:1px solid #333c4c}
+.msg.user{align-self:flex-end;background:#17426d}
+.meta{font-size:11px;color:#a8b2bf;margin-bottom:4px}
+.system{align-self:center;color:#9aa6b2;font-size:12px}
+.composer{border-top:1px solid #303744;padding:12px;background:#151a21}
+.row{display:flex;gap:8px}
+.row>*{flex:1}
+.agent{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #2d3441}
+.agent:last-child{border-bottom:0}
+.primary{background:#2f65a8}
+.green{background:#2f7046}
+.red{background:#7b3040}
+@media(max-width:760px){.app{grid-template-columns:1fr}aside{border-right:0;border-bottom:1px solid #303744}.panel{min-height:65vh}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside>
+  <h1>人工無能チャット</h1>
+  <div class="muted" style="font-size:13px;margin-bottom:14px">辞書学習・類似返答・切り貼り生成。賢さは期待するだけ無駄です。</div>
+
+  <div class="card">
+    <b>個体追加</b>
+    <input id="name" value="シロ" style="margin-top:8px">
+    <input id="rate" type="range" min="10" max="100" value="50" style="margin-top:8px">
+    <button id="add" class="primary" style="width:100%;margin-top:8px">作成</button>
+  </div>
+
+  <div class="card">
+    <b>個体一覧</b>
+    <div id="agents"></div>
+  </div>
+
+  <div class="card">
+    <b>広場自動会話</b>
+    <div class="row" style="margin-top:8px">
+      <input id="rounds" type="number" min="1" max="50" value="5">
+      <button id="auto" class="green">開始</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <button id="save" style="width:100%">保存</button>
+    <button id="reset" class="red" style="width:100%;margin-top:8px">全消去</button>
+  </div>
+</aside>
+
+<main>
+  <div class="tabs">
+    <button class="active" data-tab="personal">個人チャット</button>
+    <button data-tab="plaza">広場</button>
+  </div>
+
+  <section id="personal" class="panel active">
+    <div style="padding:10px 12px;border-bottom:1px solid #303744">
+      <select id="personalAgent"></select>
+    </div>
+    <div id="personalChat" class="chat"></div>
+    <div class="composer">
+      <div class="row">
+        <textarea id="personalInput" placeholder="選択した個体に話しかける"></textarea>
+        <button id="personalSend" class="primary">送信</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="plaza" class="panel">
+    <div id="plazaChat" class="chat"></div>
+    <div class="composer">
+      <div class="row">
+        <textarea id="plazaInput" placeholder="広場に投稿する"></textarea>
+        <button id="plazaSend" class="primary">送信</button>
+      </div>
+    </div>
+  </section>
+</main>
+</div>
+
+<script>
+(function(){
+const KEY="af_chat_v2";
+function norm(s){return String(s||"").trim().replace(/\s+/g," ")}
+function grams(s){s=norm(s);let a=[];for(let i=0;i<s.length-1;i++)a.push(s.slice(i,i+2));return a}
+function sim(a,b){let A=new Set(grams(a)),B=new Set(grams(b)),n=0;A.forEach(x=>{if(B.has(x))n++});return (2*n)/((A.size+B.size)||1)}
+function pick(a){return a[Math.floor(Math.random()*a.length)]}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function Agent(name,rate){this.name=name;this.rate=rate;this.pairs={};this.vocab={};this.last=-99}
+Agent.prototype.learn=function(input,reply){
+ input=norm(input);reply=norm(reply);if(!input||!reply)return;
+ if(!this.pairs[input])this.pairs[input]=[];
+ this.pairs[input].push(reply);if(this.pairs[input].length>10)this.pairs[input].shift();
+ grams(input+" "+reply).forEach(g=>this.vocab[g]=(this.vocab[g]||0)+1);
+};
+Agent.prototype.fam=function(text){let g=grams(text);if(!g.length)return 0;return g.filter(x=>this.vocab[x]).length/g.length}
+Agent.prototype.reply=function(text){
+ text=norm(text);
+ if(this.pairs[text]&&this.pairs[text].length)return pick(this.pairs[text]);
+ let cand=Object.keys(this.pairs).map(k=>[sim(text,k),k]).filter(x=>x[0]>=.3).sort((a,b)=>b[0]-a[0]).slice(0,4);
+ if(cand.length&&Math.random()<.72)return pick(this.pairs[pick(cand)[1]]);
+ let all=Object.values(this.pairs).flat();
+ if(all.length>=2&&Math.random()<.55){
+   let a=pick(all),b=pick(all),x=Math.max(1,Math.floor(a.length/2)),y=Math.floor(b.length/2);
+   return a.slice(0,x)+b.slice(y);
+ }
+ if(text.includes("こんにちは"))return "こんにちは";
+ if(/[?？]/.test(text))return "わかりません";
+ return text;
+};
+Agent.prototype.should=function(text,turn){
+ if(turn-this.last<=1)return false;
+ return Math.random()<Math.min(.95,this.rate*(.35+1.4*this.fam(text)));
+};
+
+let state;
+function fresh(){
+ return {turn:0,agents:[new Agent("アオ",.62),new Agent("ミドリ",.48),new Agent("ムラサキ",.36)],personal:{},plaza:[]};
+}
+function load(){
+ try{
+  let x=JSON.parse(localStorage.getItem(KEY));
+  if(!x)throw 0;
+  x.agents=x.agents.map(o=>Object.assign(new Agent(o.name,o.rate),o));
+  state=x;
+ }catch(e){state=fresh()}
+}
+function save(){localStorage.setItem(KEY,JSON.stringify(state))}
+function addPersonal(name,who,text){if(!state.personal[name])state.personal[name]=[];state.personal[name].push({who,text})}
+function addPlaza(who,text){state.plaza.push({who,text})}
+
+function renderAgents(){
+ let r=document.getElementById("agents");r.innerHTML="";
+ state.agents.forEach((a,i)=>{
+  let d=document.createElement("div");d.className="agent";
+  d.innerHTML="<span><b>"+esc(a.name)+"</b><br><small>会話例 "+Object.values(a.pairs).flat().length+"</small></span><button>削除</button>";
+  d.querySelector("button").onclick=function(){
+   if(state.agents.length===1){alert("最後の1体まで消してどうするんですか。");return}
+   state.agents.splice(i,1);save();renderAll();
+  };
+  r.appendChild(d);
+ });
+ let s=document.getElementById("personalAgent"),cur=s.value;s.innerHTML="";
+ state.agents.forEach(a=>{let o=document.createElement("option");o.value=a.name;o.textContent=a.name;s.appendChild(o)});
+ if(state.agents.some(a=>a.name===cur))s.value=cur;
+}
+function renderPersonal(){
+ let name=document.getElementById("personalAgent").value;
+ let c=document.getElementById("personalChat");c.innerHTML="";
+ (state.personal[name]||[]).forEach(m=>{
+  let d=document.createElement("div");d.className="msg "+(m.who==="あなた"?"user":"");
+  d.innerHTML='<div class="meta">'+esc(m.who)+'</div>'+esc(m.text);c.appendChild(d);
+ });
+ c.scrollTop=c.scrollHeight;
+}
+function renderPlaza(){
+ let c=document.getElementById("plazaChat");c.innerHTML="";
+ state.plaza.forEach(m=>{
+  let d=document.createElement("div");
+  d.className=m.who==="system"?"system":"msg "+(m.who==="あなた"?"user":"");
+  d.innerHTML=m.who==="system"?esc(m.text):'<div class="meta">'+esc(m.who)+'</div>'+esc(m.text);
+  c.appendChild(d);
+ });
+ c.scrollTop=c.scrollHeight;
+}
+function renderAll(){renderAgents();renderPersonal();renderPlaza()}
+
+document.getElementById("add").onclick=function(){
+ let n=norm(document.getElementById("name").value),r=Number(document.getElementById("rate").value)/100;
+ if(!n)return;if(state.agents.some(a=>a.name===n)){alert("同名がいます。");return}
+ state.agents.push(new Agent(n,r));save();renderAll();
+};
+document.getElementById("personalAgent").onchange=renderPersonal;
+document.getElementById("personalSend").onclick=function(){
+ let name=document.getElementById("personalAgent").value,a=state.agents.find(x=>x.name===name),el=document.getElementById("personalInput"),t=norm(el.value);
+ if(!t)return;let r=a.reply(t);a.learn(t,r);addPersonal(name,"あなた",t);addPersonal(name,name,r);el.value="";save();renderPersonal();renderAgents();
+};
+document.getElementById("plazaSend").onclick=function(){
+ let el=document.getElementById("plazaInput"),t=norm(el.value);if(!t)return;state.turn++;addPlaza("あなた",t);let n=0;
+ state.agents.slice().sort(()=>Math.random()-.5).forEach(a=>{if(a.should(t,state.turn)){let r=a.reply(t);a.learn(t,r);a.last=state.turn;addPlaza(a.name,r);n++;}});
+ if(!n)addPlaza("system","……誰も反応しませんでした。全員沈黙です。");
+ el.value="";save();renderAll();
+};
+document.getElementById("auto").onclick=async function(){
+ let n=Math.max(1,Math.min(50,Number(document.getElementById("rounds").value)||5));
+ for(let i=0;i<n;i++){
+  state.turn++;let a=pick(state.agents),starter=pick(["こんにちは","今日は何をする","猫は好き","よくわかりません"]);
+  let keys=Object.values(a.pairs).flat();if(keys.length)starter=pick(keys);
+  addPlaza(a.name,starter);a.last=state.turn;
+  state.agents.filter(x=>x!==a).forEach(b=>{if(b.should(starter,state.turn)){let r=b.reply(starter);b.learn(starter,r);b.last=state.turn;addPlaza(b.name,r);}});
+  save();renderAll();await new Promise(r=>setTimeout(r,180));
+ }
+};
+document.getElementById("save").onclick=function(){save();alert("保存しました。")}
+document.getElementById("reset").onclick=function(){if(confirm("全部消しますか？")){state=fresh();save();renderAll();}}
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=function(){
+ document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));
+ document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));
+ b.classList.add("active");document.getElementById(b.dataset.tab).classList.add("active");
+});
+document.getElementById("personalInput").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();document.getElementById("personalSend").click()}});
+document.getElementById("plazaInput").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();document.getElementById("plazaSend").click()}});
+load();renderAll();
+})();
+</script>
+</body>
+</html>
