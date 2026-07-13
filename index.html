@@ -3,23 +3,24 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>人工無能チャット 改良版</title>
+<title>人工無能チャット v4</title>
 <style>
 :root{
-  --bg:#10141b;--panel:#181e28;--panel2:#222a36;--line:#333d4d;
-  --text:#edf2f7;--muted:#9aa7b5;--blue:#2d67ad;--green:#2d7448;--red:#843344;
+  --bg:#0f1319;--panel:#171d26;--panel2:#212936;--line:#344052;
+  --text:#eef3f8;--muted:#98a6b5;--blue:#2e6db5;--green:#2f754b;
+  --red:#86384a;--yellow:#8a6a25;--bubble:#252e3b;--user:#164979;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
-.app{max-width:1180px;margin:auto;min-height:100vh;display:grid;grid-template-columns:300px 1fr}
+.app{max-width:1240px;margin:auto;min-height:100vh;display:grid;grid-template-columns:320px 1fr}
 aside{background:var(--panel);border-right:1px solid var(--line);padding:16px;overflow:auto}
 main{min-width:0;display:flex;flex-direction:column;min-height:100vh}
-h1{font-size:21px;margin:0 0 8px}
+h1{font-size:22px;margin:0 0 6px}
 h2{font-size:14px;margin:0 0 10px}
 .small{font-size:12px;color:var(--muted);line-height:1.55}
-.card{background:var(--panel2);border:1px solid var(--line);border-radius:13px;padding:12px;margin-bottom:12px}
+.card{background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:12px}
 label{display:block;font-size:12px;color:var(--muted);margin:8px 0 4px}
-button,input,select,textarea{font:inherit;color:var(--text);background:#28313e;border:1px solid #3b4657;border-radius:9px}
+button,input,select,textarea{font:inherit;color:var(--text);background:#293341;border:1px solid #3c485a;border-radius:9px}
 button{padding:8px 10px;cursor:pointer}
 input,select,textarea{width:100%;padding:9px}
 textarea{min-height:58px;resize:vertical}
@@ -28,57 +29,82 @@ textarea{min-height:58px;resize:vertical}
 .primary{background:var(--blue)}
 .green{background:var(--green)}
 .red{background:var(--red)}
-.tabs{display:flex;border-bottom:1px solid var(--line);background:#151a22}
-.tabs button{border:0;border-radius:0;background:transparent;padding:13px 18px}
-.tabs button.active{background:#252d39}
+.yellow{background:var(--yellow)}
+.tabs{display:flex;flex-wrap:wrap;border-bottom:1px solid var(--line);background:#151a22}
+.tabs button{border:0;border-radius:0;background:transparent;padding:13px 17px}
+.tabs button.active{background:#252e3a}
 .panel{display:none;flex:1;min-height:0}
 .panel.active{display:flex;flex-direction:column}
 .chat{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
-.msg{max-width:80%;background:#252d39;border:1px solid #374254;border-radius:13px;padding:10px 12px;line-height:1.5}
-.msg.user{align-self:flex-end;background:#174775}
-.meta{font-size:11px;color:var(--muted);margin-bottom:4px}
+.msg{max-width:82%;background:var(--bubble);border:1px solid #394658;border-radius:13px;padding:10px 12px;line-height:1.52}
+.msg.user{align-self:flex-end;background:var(--user)}
+.meta{font-size:11px;color:var(--muted);margin-bottom:4px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .system{align-self:center;color:var(--muted);font-size:12px;padding:5px 9px;border:1px dashed var(--line);border-radius:999px}
+.source{font-size:10px;padding:2px 6px;border-radius:999px;background:#334155;color:#dce6f2}
+.source.teach{background:#27563a}
+.source.remix{background:#654b21}
+.source.echo{background:#6b2f3a}
 .composer{padding:12px;border-top:1px solid var(--line);background:#151a22}
+.toolbar{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:8px}
+.toolbar button{font-size:12px}
 .agent{padding:9px 0;border-bottom:1px solid #303947}
 .agent:last-child{border-bottom:0}
 .agent-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.agent-actions{display:flex;gap:5px;margin-top:6px}
+.agent-actions{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}
 .agent-actions button{font-size:11px;padding:5px 7px}
 .badge{font-size:11px;padding:2px 6px;border-radius:999px;background:#31415a}
 .stat{font-size:11px;color:var(--muted)}
 .toggle{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px}
 .toggle input{width:auto}
-.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
-.toolbar button{font-size:12px}
-@media(max-width:800px){
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.statsbox{font-size:12px;line-height:1.7;color:var(--muted)}
+.table{width:100%;border-collapse:collapse;font-size:12px}
+.table th,.table td{border-bottom:1px solid #344052;padding:7px;text-align:left}
+.table th{color:#c9d4df}
+.warn{color:#ffd27a}
+.ok{color:#8ee0a7}
+@media(max-width:850px){
  .app{grid-template-columns:1fr}
  aside{border-right:0;border-bottom:1px solid var(--line)}
  main{min-height:72vh}
+ .grid2{grid-template-columns:1fr}
 }
 </style>
 </head>
 <body>
 <div class="app">
 <aside>
-  <h1>人工無能チャット 改良版</h1>
-  <div class="small">反復地獄を抑えつつ、意味不明な切り貼りは少し残します。完全正常化したら、それはもう人工無能ではありません。</div>
+  <h1>人工無能チャット v4</h1>
+  <div class="small">語録の突然変異は残し、全員唱和と同文連打だけ抑えます。完全に正常化したら、この企画の存在意義が蒸発します。</div>
 
   <div class="card">
     <h2>個体追加</h2>
-    <input id="newName" value="シロ" maxlength="16">
+    <input id="newName" value="シロ" maxlength="18">
     <label>発言率 <span id="rateText">50%</span></label>
     <input id="newRate" type="range" min="5" max="95" value="50">
+    <label>得意語（カンマ区切り）</label>
+    <input id="newFav" placeholder="例：神社, UDK, RU">
     <button id="addAgent" class="primary" style="width:100%;margin-top:8px">作成</button>
   </div>
 
   <div class="card">
     <h2>生成設定</h2>
-    <label>切り貼り率 <span id="remixText">18%</span></label>
-    <input id="remixRate" type="range" min="0" max="60" value="18">
-    <label>直近発言の記憶数 <span id="recentText">8</span></label>
-    <input id="recentLimit" type="range" min="2" max="20" value="8">
+    <label>切り貼り率 <span id="remixText">15%</span></label>
+    <input id="remixRate" type="range" min="0" max="50" value="15">
+
+    <label>個体の直近記憶 <span id="recentText">10</span></label>
+    <input id="recentLimit" type="range" min="3" max="25" value="10">
+
+    <label>広場全体の直近記憶 <span id="plazaRecentText">18</span></label>
+    <input id="plazaRecentLimit" type="range" min="5" max="40" value="18">
+
+    <label>オウム返し抑制度 <span id="echoText">95%</span></label>
+    <input id="echoPenalty" type="range" min="0" max="100" value="95">
+
     <label class="toggle"><input id="plazaLearn" type="checkbox" checked> 広場で学習する</label>
     <label class="toggle"><input id="avoidExact" type="checkbox" checked> 直近と同じ返答を避ける</label>
+    <label class="toggle"><input id="blockChorus" type="checkbox" checked> 広場で同文唱和を防ぐ</label>
+    <label class="toggle"><input id="showSource" type="checkbox" checked> 返答の出所を表示</label>
   </div>
 
   <div class="card">
@@ -92,6 +118,13 @@ textarea{min-height:58px;resize:vertical}
       <input id="rounds" type="number" min="1" max="50" value="5">
       <button id="autoTalk" class="green">開始</button>
     </div>
+    <button id="stopAuto" class="yellow" style="width:100%;margin-top:8px">停止</button>
+  </div>
+
+  <div class="card">
+    <h2>辞書整備</h2>
+    <button id="cleanEcho" style="width:100%">オウム返し候補を弱体化</button>
+    <button id="cleanDupes" style="width:100%;margin-top:7px">重複候補を整理</button>
   </div>
 
   <div class="card">
@@ -109,7 +142,9 @@ textarea{min-height:58px;resize:vertical}
   <div class="tabs">
     <button class="active" data-tab="personal">個人チャット</button>
     <button data-tab="teach">手動で教える</button>
+    <button data-tab="traits">個性設定</button>
     <button data-tab="plaza">広場</button>
+    <button data-tab="stats">統計</button>
   </div>
 
   <section id="personal" class="panel active">
@@ -126,17 +161,33 @@ textarea{min-height:58px;resize:vertical}
   </section>
 
   <section id="teach" class="panel">
-    <div style="padding:14px;max-width:760px">
+    <div style="padding:14px;max-width:780px">
       <div class="card">
-        <h2>正しい受け答えを登録</h2>
+        <h2>教師データを登録</h2>
         <select id="teachAgent"></select>
         <label>入力</label>
         <textarea id="teachInput" placeholder="例：こんにちは"></textarea>
         <label>返答</label>
         <textarea id="teachReply" placeholder="例：こんにちは。今日はどうしましたか？"></textarea>
-        <button id="teachBtn" class="green" style="width:100%;margin-top:8px">この会話を教える</button>
+        <button id="teachBtn" class="green" style="width:100%;margin-top:8px">最優先候補として教える</button>
       </div>
-      <div class="small">ここで教えた内容は重複をまとめて保存します。同じ返答を100回登録して語録独裁国家を作る仕様は廃止しました。</div>
+      <div class="small">教師データは通常学習より高い重みを持ちます。雑に100回登録して殴る方式は不要です。</div>
+    </div>
+  </section>
+
+  <section id="traits" class="panel">
+    <div style="padding:14px;max-width:780px">
+      <div class="card">
+        <h2>個体の得意語・苦手語</h2>
+        <select id="traitAgent"></select>
+        <label>得意語（カンマ区切り）</label>
+        <textarea id="favWords"></textarea>
+        <label>苦手語（カンマ区切り）</label>
+        <textarea id="avoidWords"></textarea>
+        <label>得意語ボーナス <span id="favBoostText">1.8倍</span></label>
+        <input id="favBoost" type="range" min="10" max="30" value="18">
+        <button id="saveTraits" class="primary" style="width:100%;margin-top:8px">個性を保存</button>
+      </div>
     </div>
   </section>
 
@@ -154,51 +205,78 @@ textarea{min-height:58px;resize:vertical}
       </div>
     </div>
   </section>
+
+  <section id="stats" class="panel">
+    <div style="padding:14px;overflow:auto">
+      <div class="grid2">
+        <div class="card statsbox" id="globalStats"></div>
+        <div class="card statsbox" id="healthStats"></div>
+      </div>
+      <div class="card">
+        <h2>個体別統計</h2>
+        <div id="agentStats"></div>
+      </div>
+      <div class="card">
+        <h2>広場の頻出語録</h2>
+        <div id="phraseStats"></div>
+      </div>
+    </div>
+  </section>
 </main>
 </div>
 
 <script>
 const KEY="artificialFoolsV3";
+const VERSION=4;
 const COLORS=["#79a7ff","#7bd88f","#d49bff","#ffd36e","#ff8b8b","#70d8d8","#ff9fd2"];
 
 function norm(s){return String(s||"").trim().replace(/\s+/g," ")}
 function rand(a){return a[Math.floor(Math.random()*a.length)]}
+function words(s){return norm(s).split(/[、,\s]+/).filter(Boolean)}
 function grams(s,n=2){
-  s=norm(s); if(!s)return [];
+  s=norm(s);if(!s)return[];
   if(s.length<n)return[s];
-  const a=[]; for(let i=0;i<=s.length-n;i++)a.push(s.slice(i,i+n));
+  const a=[];for(let i=0;i<=s.length-n;i++)a.push(s.slice(i,i+n));
   return a;
 }
 function similarity(a,b){
-  const A=new Set(grams(a)),B=new Set(grams(b)); let n=0;
+  const A=new Set(grams(a)),B=new Set(grams(b));let n=0;
   A.forEach(x=>{if(B.has(x))n++});
   return (2*n)/((A.size+B.size)||1);
 }
 function esc(s){
   return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 }
+function uniq(a){return [...new Set(a)]}
 
 class Agent{
   constructor(name,rate=.5,color=rand(COLORS)){
     this.name=name;this.rate=rate;this.color=color;
-    this.pairs={};          // input -> [{text,count,used}]
-    this.vocab={};
-    this.recent=[];
-    this.personalLog=[];
+    this.pairs={};this.vocab={};this.recent=[];this.personalLog=[];
+    this.favWords=[];this.avoidWords=[];this.favBoost=1.8;
+    this.stats={spoken:0,remix:0,echo:0,teach:0};
   }
   learnText(text){
     grams(text).forEach(g=>this.vocab[g]=(this.vocab[g]||0)+1);
   }
-  learnPair(input,reply){
-    input=norm(input);reply=norm(reply);
-    if(!input||!reply)return;
+  normalizeCandidate(c){
+    if(typeof c==="string")return{text:c,count:1,used:0,kind:"learned",echoPenalty:1};
+    return Object.assign({count:1,used:0,kind:"learned",echoPenalty:1},c);
+  }
+  learnPair(input,reply,kind="learned"){
+    input=norm(input);reply=norm(reply);if(!input||!reply)return;
     if(!this.pairs[input])this.pairs[input]=[];
-    const found=this.pairs[input].find(x=>x.text===reply);
-    if(found) found.count=Math.min(5,(found.count||1)+1);
-    else this.pairs[input].push({text:reply,count:1,used:0});
-    if(this.pairs[input].length>12){
-      this.pairs[input].sort((a,b)=>(b.count||1)-(a.count||1));
-      this.pairs[input]=this.pairs[input].slice(0,12);
+    this.pairs[input]=this.pairs[input].map(x=>this.normalizeCandidate(x));
+    let found=this.pairs[input].find(x=>x.text===reply);
+    if(found){
+      found.count=Math.min(kind==="teach"?12:6,(found.count||1)+(kind==="teach"?3:1));
+      if(kind==="teach")found.kind="teach";
+    }else{
+      this.pairs[input].push({text:reply,count:kind==="teach"?5:1,used:0,kind,echoPenalty:1});
+    }
+    if(this.pairs[input].length>16){
+      this.pairs[input].sort((a,b)=>this.baseScore(b,input)-this.baseScore(a,input));
+      this.pairs[input]=this.pairs[input].slice(0,16);
     }
     this.learnText(input);this.learnText(reply);
   }
@@ -207,57 +285,94 @@ class Agent{
     return g.filter(x=>this.vocab[x]).length/g.length;
   }
   shouldReply(text){
-    return Math.random()<Math.min(.92,this.rate*(.35+1.35*this.familiarity(text)));
+    return Math.random()<Math.min(.92,this.rate*(.32+1.35*this.familiarity(text)));
   }
-  candidateScore(c){
-    let score=(c.count||1)/(1+(c.used||0)*.55);
-    const recentIndex=this.recent.lastIndexOf(c.text);
-    if(recentIndex>=0){
-      const distance=this.recent.length-recentIndex;
-      score*=Math.max(.05,distance/(state.settings.recentLimit+1));
+  traitMultiplier(text){
+    let m=1;
+    const t=norm(text);
+    if(this.favWords.some(w=>w&&t.includes(w)))m*=this.favBoost||1.8;
+    if(this.avoidWords.some(w=>w&&t.includes(w)))m*=.35;
+    return m;
+  }
+  plazaPenalty(text){
+    const idx=state.plazaRecent.lastIndexOf(text);
+    if(idx<0)return 1;
+    const distance=state.plazaRecent.length-idx;
+    return Math.max(.02,distance/(state.settings.plazaRecentLimit+2));
+  }
+  baseScore(c,input=""){
+    c=this.normalizeCandidate(c);
+    let score=(c.count||1)/(1+(c.used||0)*.65);
+    if(c.kind==="teach")score*=2.8;
+    score*=this.traitMultiplier(c.text);
+    score*=c.echoPenalty||1;
+
+    const ri=this.recent.lastIndexOf(c.text);
+    if(ri>=0){
+      const d=this.recent.length-ri;
+      score*=Math.max(.03,d/(state.settings.recentLimit+2));
+    }
+    score*=this.plazaPenalty(c.text);
+
+    const echo=similarity(input,c.text);
+    if(echo>=.94){
+      score*=Math.max(.01,1-state.settings.echoPenalty);
     }
     return score;
   }
-  chooseWeighted(candidates){
+  chooseWeighted(candidates,input=""){
     if(!candidates.length)return null;
-    let pool=candidates.slice();
+    let pool=candidates.map(x=>this.normalizeCandidate(x));
     if(state.settings.avoidExact){
-      const nonRecent=pool.filter(c=>!this.recent.includes(c.text));
-      if(nonRecent.length)pool=nonRecent;
+      const fresh=pool.filter(c=>!this.recent.includes(c.text));
+      if(fresh.length)pool=fresh;
     }
-    const weights=pool.map(c=>Math.max(.01,this.candidateScore(c)));
+    if(state.settings.blockChorus){
+      const fresh=pool.filter(c=>!state.plazaRecent.includes(c.text));
+      if(fresh.length)pool=fresh;
+    }
+    const weights=pool.map(c=>Math.max(.005,this.baseScore(c,input)));
     let r=Math.random()*weights.reduce((a,b)=>a+b,0);
-    for(let i=0;i<pool.length;i++){r-=weights[i];if(r<=0){pool[i].used=(pool[i].used||0)+1;return pool[i].text}}
-    return pool[pool.length-1].text;
+    for(let i=0;i<pool.length;i++){
+      r-=weights[i];
+      if(r<=0){
+        pool[i].used=(pool[i].used||0)+1;
+        return{ text:pool[i].text, source:pool[i].kind||"learned" };
+      }
+    }
+    return{text:pool[pool.length-1].text,source:pool[pool.length-1].kind||"learned"};
   }
   exactReply(text){
-    const arr=this.pairs[norm(text)]||[];
-    return this.chooseWeighted(arr);
+    const arr=(this.pairs[norm(text)]||[]).map(x=>this.normalizeCandidate(x));
+    return this.chooseWeighted(arr,text);
   }
   similarReply(text){
     const found=Object.keys(this.pairs)
       .map(k=>({score:similarity(text,k),key:k}))
       .filter(x=>x.score>=.34)
       .sort((a,b)=>b.score-a.score)
-      .slice(0,6);
+      .slice(0,7);
     if(!found.length)return null;
     let all=[];
     found.forEach(f=>{
-      this.pairs[f.key].forEach(c=>all.push({...c,weight:f.score}));
+      this.pairs[f.key].map(x=>this.normalizeCandidate(x)).forEach(c=>{
+        all.push(Object.assign({},c,{count:(c.count||1)*f.score}));
+      });
     });
-    all=all.map(c=>({...c,count:(c.count||1)*(c.weight||1)}));
-    return this.chooseWeighted(all);
+    return this.chooseWeighted(all,text);
   }
   remix(){
-    const corpus=Object.values(this.pairs).flat().map(x=>x.text).filter(x=>x.length>=4);
-    if(corpus.length<3)return null;
-    for(let tries=0;tries<8;tries++){
-      const a=rand(corpus),b=rand(corpus);
-      if(a===b)continue;
-      const cutA=Math.max(1,Math.floor(a.length*(.35+Math.random()*.3)));
-      const cutB=Math.min(b.length-1,Math.floor(b.length*(.35+Math.random()*.3)));
+    const corpus=uniq(Object.values(this.pairs).flat().map(x=>this.normalizeCandidate(x).text))
+      .filter(x=>x.length>=4&&!state.plazaRecent.includes(x));
+    if(corpus.length<4)return null;
+    for(let tries=0;tries<12;tries++){
+      const a=rand(corpus),b=rand(corpus);if(a===b)continue;
+      const cutA=Math.max(1,Math.floor(a.length*(.30+Math.random()*.35)));
+      const cutB=Math.min(b.length-1,Math.floor(b.length*(.30+Math.random()*.35)));
       const made=norm(a.slice(0,cutA)+b.slice(cutB));
-      if(made.length>=3&&!this.recent.includes(made)&&made!==a&&made!==b)return made;
+      if(made.length>=3&&made.length<=80&&!this.recent.includes(made)&&!state.plazaRecent.includes(made)&&made!==a&&made!==b){
+        return{text:made,source:"remix"};
+      }
     }
     return null;
   }
@@ -269,55 +384,106 @@ class Agent{
     let out=this.exactReply(text);
     if(!out&&Math.random()<.72)out=this.similarReply(text);
     if(!out&&Math.random()<state.settings.remixRate)out=this.remix();
+
     if(!out){
-      if(text.includes("こんにちは"))out="こんにちは";
-      else if(/[?？]/.test(text))out="わかりません";
-      else out=norm(text);
+      if(text.includes("こんにちは"))out={text:"こんにちは",source:"fallback"};
+      else if(/[?？]/.test(text))out={text:"わかりません",source:"fallback"};
+      else out={text:norm(text),source:"echo"};
     }
-    this.remember(out);
+
+    if(state.settings.blockChorus&&state.plazaRecent.includes(out.text)){
+      const alt=this.similarReply(text)||this.remix();
+      if(alt&&!state.plazaRecent.includes(alt.text))out=alt;
+    }
+
+    this.remember(out.text);
+    this.stats.spoken=(this.stats.spoken||0)+1;
+    if(out.source==="remix")this.stats.remix=(this.stats.remix||0)+1;
+    if(out.source==="echo")this.stats.echo=(this.stats.echo||0)+1;
+    if(out.source==="teach")this.stats.teach=(this.stats.teach||0)+1;
     return out;
   }
   distinctCount(){
-    return new Set(Object.values(this.pairs).flat().map(x=>x.text)).size;
+    return uniq(Object.values(this.pairs).flat().map(x=>this.normalizeCandidate(x).text)).length;
   }
 }
 
 function defaults(){
   return{
-    turn:0,
+    version:VERSION,turn:0,
     agents:[
       new Agent("アオ",.62,COLORS[0]),
       new Agent("ミドリ",.48,COLORS[1]),
       new Agent("ムラサキ",.36,COLORS[2])
     ],
-    plazaLog:[{who:"system",text:"改良版の広場が開きました。反復抑制が有効です。"}],
-    settings:{remixRate:.18,recentLimit:8,plazaLearn:true,avoidExact:true}
+    plazaLog:[{who:"system",text:"v4広場が開きました。全員唱和対策が有効です。"}],
+    plazaRecent:[],
+    settings:{
+      remixRate:.15,recentLimit:10,plazaRecentLimit:18,
+      echoPenalty:.95,plazaLearn:true,avoidExact:true,
+      blockChorus:true,showSource:true
+    }
   };
 }
 
 let state;
+let autoStop=false;
+
+function migrateAgent(o){
+  const a=Object.assign(new Agent(o.name,o.rate,o.color),o);
+  a.favWords=Array.isArray(o.favWords)?o.favWords:[];
+  a.avoidWords=Array.isArray(o.avoidWords)?o.avoidWords:[];
+  a.favBoost=Number(o.favBoost||1.8);
+  a.stats=Object.assign({spoken:0,remix:0,echo:0,teach:0},o.stats||{});
+  a.recent=Array.isArray(o.recent)?o.recent:[];
+  a.personalLog=Array.isArray(o.personalLog)?o.personalLog:[];
+  for(const k of Object.keys(a.pairs||{})){
+    a.pairs[k]=(a.pairs[k]||[]).map(x=>a.normalizeCandidate(x));
+  }
+  return a;
+}
+
 function load(){
   try{
     const raw=localStorage.getItem(KEY);
     if(!raw){state=defaults();return}
     const x=JSON.parse(raw);
     state=x;
-    state.agents=(x.agents||[]).map(o=>Object.assign(new Agent(o.name,o.rate,o.color),o));
+    state.version=VERSION;
+    state.agents=(x.agents||[]).map(migrateAgent);
     state.settings=Object.assign(defaults().settings,x.settings||{});
+    state.plazaLog=Array.isArray(x.plazaLog)?x.plazaLog:[];
+    state.plazaRecent=Array.isArray(x.plazaRecent)?x.plazaRecent:
+      state.plazaLog.filter(m=>m.who!=="system").slice(-18).map(m=>m.text);
     if(!state.agents.length)state=defaults();
   }catch(e){state=defaults()}
 }
 function save(){localStorage.setItem(KEY,JSON.stringify(state))}
+function pushPlazaRecent(text){
+  state.plazaRecent.push(text);
+  while(state.plazaRecent.length>state.settings.plazaRecentLimit)state.plazaRecent.shift();
+}
+function sourceLabel(s){
+  return({teach:"教師",learned:"学習",remix:"切り貼り",fallback:"初期返答",echo:"オウム返し"}[s]||s||"");
+}
 
 function renderAgents(){
   const root=document.getElementById("agents");root.innerHTML="";
   state.agents.forEach((a,i)=>{
     const d=document.createElement("div");d.className="agent";
-    d.innerHTML=`<div class="agent-top"><div><b>${esc(a.name)}</b> <span class="badge">${Math.round(a.rate*100)}%</span></div><span class="stat">異なる返答 ${a.distinctCount()}</span></div>
-    <div class="agent-actions"><button data-act="reset">辞書リセット</button><button data-act="delete">削除</button></div>`;
+    d.innerHTML=`<div class="agent-top">
+      <div><b>${esc(a.name)}</b> <span class="badge">${Math.round(a.rate*100)}%</span></div>
+      <span class="stat">異なる返答 ${a.distinctCount()}</span>
+    </div>
+    <div class="stat">得意語: ${esc(a.favWords.join(", ")||"なし")}</div>
+    <div class="agent-actions">
+      <button data-act="reset">辞書リセット</button>
+      <button data-act="delete">削除</button>
+    </div>`;
     d.querySelector('[data-act="reset"]').onclick=()=>{
       if(confirm(`${a.name} の辞書と個人ログを消しますか？`)){
-        a.pairs={};a.vocab={};a.recent=[];a.personalLog=[];save();renderAll();
+        a.pairs={};a.vocab={};a.recent=[];a.personalLog=[];a.stats={spoken:0,remix:0,echo:0,teach:0};
+        save();renderAll();
       }
     };
     d.querySelector('[data-act="delete"]').onclick=()=>{
@@ -327,8 +493,8 @@ function renderAgents(){
     root.appendChild(d);
   });
 
-  ["personalAgent","teachAgent"].forEach(id=>{
-    const sel=document.getElementById(id),old=sel.value;sel.innerHTML="";
+  ["personalAgent","teachAgent","traitAgent"].forEach(id=>{
+    const sel=document.getElementById(id),old=Number(sel.value||0);sel.innerHTML="";
     state.agents.forEach((a,i)=>{
       const o=document.createElement("option");o.value=i;o.textContent=a.name;sel.appendChild(o);
     });
@@ -342,7 +508,7 @@ function renderPersonal(){
   (a?.personalLog||[]).forEach(m=>{
     const d=document.createElement("div");
     d.className="msg "+(m.who==="あなた"?"user":"");
-    d.innerHTML=`<div class="meta">${esc(m.who)}</div>${esc(m.text)}`;
+    d.innerHTML=`<div class="meta">${esc(m.who)}${m.source&&state.settings.showSource?`<span class="source ${m.source}">${sourceLabel(m.source)}</span>`:""}</div>${esc(m.text)}`;
     root.appendChild(d);
   });
   root.scrollTop=root.scrollHeight;
@@ -355,41 +521,95 @@ function renderPlaza(){
     if(m.who==="system"){d.className="system";d.textContent=m.text}
     else{
       d.className="msg "+(m.who==="あなた"?"user":"");
-      d.innerHTML=`<div class="meta">${esc(m.who)}</div>${esc(m.text)}`;
+      d.innerHTML=`<div class="meta">${esc(m.who)}${m.source&&state.settings.showSource?`<span class="source ${m.source}">${sourceLabel(m.source)}</span>`:""}</div>${esc(m.text)}`;
     }
     root.appendChild(d);
   });
   root.scrollTop=root.scrollHeight;
 }
 
-function syncSettings(){
-  document.getElementById("remixRate").value=Math.round(state.settings.remixRate*100);
-  document.getElementById("remixText").textContent=Math.round(state.settings.remixRate*100)+"%";
-  document.getElementById("recentLimit").value=state.settings.recentLimit;
-  document.getElementById("recentText").textContent=state.settings.recentLimit;
-  document.getElementById("plazaLearn").checked=state.settings.plazaLearn;
-  document.getElementById("avoidExact").checked=state.settings.avoidExact;
+function renderTraits(){
+  const i=Number(document.getElementById("traitAgent").value||0),a=state.agents[i];if(!a)return;
+  document.getElementById("favWords").value=a.favWords.join(", ");
+  document.getElementById("avoidWords").value=a.avoidWords.join(", ");
+  document.getElementById("favBoost").value=Math.round((a.favBoost||1.8)*10);
+  document.getElementById("favBoostText").textContent=(a.favBoost||1.8).toFixed(1)+"倍";
 }
-function renderAll(){renderAgents();renderPersonal();renderPlaza();syncSettings()}
+
+function renderStats(){
+  const allPhrases=state.plazaLog.filter(m=>m.who!=="system"&&m.who!=="あなた").map(m=>m.text);
+  const counts={};allPhrases.forEach(x=>counts[x]=(counts[x]||0)+1);
+  const distinct=Object.keys(counts).length;
+  const total=allPhrases.length;
+  const max=Math.max(0,...Object.values(counts));
+  const dominance=total?max/total:0;
+  const echoPairs=state.agents.reduce((s,a)=>s+Object.entries(a.pairs).reduce((q,[input,arr])=>
+    q+arr.map(x=>a.normalizeCandidate(x)).filter(c=>similarity(input,c.text)>=.94).length,0),0);
+
+  document.getElementById("globalStats").innerHTML=`
+    <b>全体</b><br>
+    個体数: ${state.agents.length}<br>
+    広場発言数: ${total}<br>
+    異なる語録: ${distinct}<br>
+    最大語録占有率: ${(dominance*100).toFixed(1)}%<br>
+    広場直近記憶: ${state.plazaRecent.length}/${state.settings.plazaRecentLimit}
+  `;
+  document.getElementById("healthStats").innerHTML=`
+    <b>健康診断</b><br>
+    オウム返し候補: ${echoPairs}<br>
+    状態: <span class="${dominance>.25?'warn':'ok'}">${dominance>.25?'語録独裁の疑い':'多様性は概ね良好'}</span><br>
+    唱和防止: ${state.settings.blockChorus?'ON':'OFF'}<br>
+    広場学習: ${state.settings.plazaLearn?'ON':'OFF'}
+  `;
+
+  let table='<table class="table"><tr><th>個体</th><th>異なる返答</th><th>発言</th><th>切り貼り</th><th>オウム</th><th>教師採用</th></tr>';
+  state.agents.forEach(a=>{
+    table+=`<tr><td>${esc(a.name)}</td><td>${a.distinctCount()}</td><td>${a.stats.spoken||0}</td><td>${a.stats.remix||0}</td><td>${a.stats.echo||0}</td><td>${a.stats.teach||0}</td></tr>`;
+  });
+  table+='</table>';
+  document.getElementById("agentStats").innerHTML=table;
+
+  const top=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,20);
+  document.getElementById("phraseStats").innerHTML=
+    '<table class="table"><tr><th>語録</th><th>回数</th><th>比率</th></tr>'+
+    top.map(([p,c])=>`<tr><td>${esc(p)}</td><td>${c}</td><td>${total?(c/total*100).toFixed(1):0}%</td></tr>`).join("")+
+    '</table>';
+}
+
+function syncSettings(){
+  const s=state.settings;
+  const map=[
+    ["remixRate",Math.round(s.remixRate*100),"remixText",v=>v+"%"],
+    ["recentLimit",s.recentLimit,"recentText",v=>v],
+    ["plazaRecentLimit",s.plazaRecentLimit,"plazaRecentText",v=>v],
+    ["echoPenalty",Math.round(s.echoPenalty*100),"echoText",v=>v+"%"]
+  ];
+  map.forEach(([id,val,tid,fmt])=>{document.getElementById(id).value=val;document.getElementById(tid).textContent=fmt(val)});
+  document.getElementById("plazaLearn").checked=s.plazaLearn;
+  document.getElementById("avoidExact").checked=s.avoidExact;
+  document.getElementById("blockChorus").checked=s.blockChorus;
+  document.getElementById("showSource").checked=s.showSource;
+}
+function renderAll(){renderAgents();renderPersonal();renderPlaza();renderTraits();renderStats();syncSettings()}
 
 document.getElementById("newRate").oninput=e=>document.getElementById("rateText").textContent=e.target.value+"%";
-document.getElementById("remixRate").oninput=e=>{
-  state.settings.remixRate=Number(e.target.value)/100;
-  document.getElementById("remixText").textContent=e.target.value+"%";save();
-};
-document.getElementById("recentLimit").oninput=e=>{
-  state.settings.recentLimit=Number(e.target.value);
-  document.getElementById("recentText").textContent=e.target.value;save();
-};
+document.getElementById("remixRate").oninput=e=>{state.settings.remixRate=Number(e.target.value)/100;save();renderAll()};
+document.getElementById("recentLimit").oninput=e=>{state.settings.recentLimit=Number(e.target.value);save();renderAll()};
+document.getElementById("plazaRecentLimit").oninput=e=>{state.settings.plazaRecentLimit=Number(e.target.value);save();renderAll()};
+document.getElementById("echoPenalty").oninput=e=>{state.settings.echoPenalty=Number(e.target.value)/100;save();renderAll()};
 document.getElementById("plazaLearn").onchange=e=>{state.settings.plazaLearn=e.target.checked;save()};
 document.getElementById("avoidExact").onchange=e=>{state.settings.avoidExact=e.target.checked;save()};
+document.getElementById("blockChorus").onchange=e=>{state.settings.blockChorus=e.target.checked;save()};
+document.getElementById("showSource").onchange=e=>{state.settings.showSource=e.target.checked;save();renderAll()};
 
 document.getElementById("addAgent").onclick=()=>{
   const name=norm(document.getElementById("newName").value);
   const rate=Number(document.getElementById("newRate").value)/100;
   if(!name)return;
   if(state.agents.some(a=>a.name===name)){alert("同名個体がいます。量産型にも限度があります。");return}
-  state.agents.push(new Agent(name,rate,COLORS[state.agents.length%COLORS.length]));
+  const a=new Agent(name,rate,COLORS[state.agents.length%COLORS.length]);
+  a.favWords=words(document.getElementById("newFav").value);
+  state.agents.push(a);
   state.plazaLog.push({who:"system",text:`${name} が広場に参加しました。`});
   save();renderAll();
 };
@@ -399,9 +619,9 @@ document.getElementById("personalSend").onclick=()=>{
   const i=Number(document.getElementById("personalAgent").value||0);
   const a=state.agents[i],el=document.getElementById("personalInput"),text=norm(el.value);
   if(!a||!text)return;
-  const reply=a.reply(text);
-  a.personalLog.push({who:"あなた",text},{who:a.name,text:reply});
-  a.learnPair(text,reply);
+  const out=a.reply(text);
+  a.personalLog.push({who:"あなた",text},{who:a.name,text:out.text,source:out.source});
+  a.learnPair(text,out.text,out.source==="remix"?"remix":"learned");
   el.value="";save();renderAll();
 };
 
@@ -411,52 +631,136 @@ document.getElementById("teachBtn").onclick=()=>{
   const input=norm(document.getElementById("teachInput").value);
   const reply=norm(document.getElementById("teachReply").value);
   if(!a||!input||!reply){alert("入力と返答の両方を書いてください。");return}
-  a.learnPair(input,reply);
-  a.personalLog.push({who:"教師",text:`「${input}」→「${reply}」を登録`});
+  a.learnPair(input,reply,"teach");
+  a.personalLog.push({who:"教師",text:`「${input}」→「${reply}」を登録`,source:"teach"});
   document.getElementById("teachInput").value="";
   document.getElementById("teachReply").value="";
   save();renderAll();alert(`${a.name} に教えました。`);
 };
 
-document.getElementById("plazaSend").onclick=()=>{
-  const el=document.getElementById("plazaInput"),text=norm(el.value);if(!text)return;
-  state.turn++;state.plazaLog.push({who:"あなた",text});
-  let count=0;
+document.getElementById("traitAgent").onchange=renderTraits;
+document.getElementById("favBoost").oninput=e=>document.getElementById("favBoostText").textContent=(Number(e.target.value)/10).toFixed(1)+"倍";
+document.getElementById("saveTraits").onclick=()=>{
+  const i=Number(document.getElementById("traitAgent").value||0),a=state.agents[i];if(!a)return;
+  a.favWords=words(document.getElementById("favWords").value);
+  a.avoidWords=words(document.getElementById("avoidWords").value);
+  a.favBoost=Number(document.getElementById("favBoost").value)/10;
+  save();renderAll();
+};
+
+function plazaPost(text,who="あなた"){
+  text=norm(text);if(!text)return;
+  state.turn++;
+  state.plazaLog.push({who,text});
+  pushPlazaRecent(text);
+  let count=0,spokenThisTurn=new Set([text]);
+
   [...state.agents].sort(()=>Math.random()-.5).forEach(a=>{
-    if(a.shouldReply(text)){
-      const reply=a.reply(text);
-      state.plazaLog.push({who:a.name,text:reply});
-      if(state.settings.plazaLearn)a.learnPair(text,reply);
-      count++;
+    if(!a.shouldReply(text))return;
+    let out=a.reply(text);
+
+    if(state.settings.blockChorus&&spokenThisTurn.has(out.text)){
+      const alt=a.similarReply(text)||a.remix();
+      if(alt&&!spokenThisTurn.has(alt.text))out=alt;
+      else return;
     }
+
+    spokenThisTurn.add(out.text);
+    state.plazaLog.push({who:a.name,text:out.text,source:out.source});
+    pushPlazaRecent(out.text);
+
+    if(state.settings.plazaLearn){
+      const echo=similarity(text,out.text);
+      if(echo<.94){
+        a.learnPair(text,out.text,out.source==="remix"?"remix":"learned");
+      }
+    }
+    count++;
   });
+
   if(!count)state.plazaLog.push({who:"system",text:"……誰も反応しませんでした。"});
-  el.value="";save();renderAll();
+  save();renderAll();
+}
+
+document.getElementById("plazaSend").onclick=()=>{
+  const el=document.getElementById("plazaInput"),text=norm(el.value);
+  if(!text)return;el.value="";plazaPost(text);
 };
 
 document.getElementById("autoTalk").onclick=async()=>{
+  autoStop=false;
   const rounds=Math.max(1,Math.min(50,Number(document.getElementById("rounds").value)||5));
   for(let r=0;r<rounds;r++){
+    if(autoStop)break;
     state.turn++;
     const speaker=rand(state.agents);
-    let corpus=Object.values(speaker.pairs).flat().map(x=>x.text);
+    const corpus=uniq(Object.values(speaker.pairs).flat().map(x=>speaker.normalizeCandidate(x).text));
     let starter=corpus.length?rand(corpus):rand(["こんにちは","今日は何をしますか","それはどういう意味ですか？"]);
-    if(speaker.recent.includes(starter)&&corpus.length>1){
-      starter=rand(corpus.filter(x=>!speaker.recent.includes(x))||corpus);
-    }
+
+    const fresh=corpus.filter(x=>!state.plazaRecent.includes(x));
+    if(fresh.length)starter=rand(fresh);
+
     speaker.remember(starter);
-    state.plazaLog.push({who:speaker.name,text:starter});
+    state.plazaLog.push({who:speaker.name,text:starter,source:"learned"});
+    pushPlazaRecent(starter);
+
+    const spokenThisTurn=new Set([starter]);
     [...state.agents].filter(a=>a!==speaker).sort(()=>Math.random()-.5).forEach(a=>{
-      if(a.shouldReply(starter)){
-        const reply=a.reply(starter);
-        state.plazaLog.push({who:a.name,text:reply});
-        if(state.settings.plazaLearn)a.learnPair(starter,reply);
+      if(!a.shouldReply(starter))return;
+      let out=a.reply(starter);
+
+      if(state.settings.blockChorus&&spokenThisTurn.has(out.text)){
+        const alt=a.similarReply(starter)||a.remix();
+        if(alt&&!spokenThisTurn.has(alt.text))out=alt;
+        else return;
+      }
+
+      spokenThisTurn.add(out.text);
+      state.plazaLog.push({who:a.name,text:out.text,source:out.source});
+      pushPlazaRecent(out.text);
+
+      if(state.settings.plazaLearn&&similarity(starter,out.text)<.94){
+        a.learnPair(starter,out.text,out.source==="remix"?"remix":"learned");
       }
     });
-    save();renderPlaza();
-    await new Promise(res=>setTimeout(res,180));
+
+    save();renderAll();
+    await new Promise(res=>setTimeout(res,200));
   }
-  renderAll();
+};
+document.getElementById("stopAuto").onclick=()=>{autoStop=true};
+
+document.getElementById("cleanEcho").onclick=()=>{
+  let n=0;
+  state.agents.forEach(a=>{
+    for(const [input,arr] of Object.entries(a.pairs)){
+      a.pairs[input]=arr.map(x=>a.normalizeCandidate(x)).map(c=>{
+        if(similarity(input,c.text)>=.94){c.echoPenalty=.05;n++}
+        return c;
+      });
+    }
+  });
+  save();renderAll();alert(`${n}件のオウム返し候補を弱体化しました。`);
+};
+
+document.getElementById("cleanDupes").onclick=()=>{
+  let removed=0;
+  state.agents.forEach(a=>{
+    for(const [input,arr] of Object.entries(a.pairs)){
+      const map=new Map();
+      arr.map(x=>a.normalizeCandidate(x)).forEach(c=>{
+        if(map.has(c.text)){
+          const old=map.get(c.text);
+          old.count=Math.min(12,(old.count||1)+(c.count||1));
+          old.used=Math.min(old.used||0,c.used||0);
+          if(c.kind==="teach")old.kind="teach";
+          removed++;
+        }else map.set(c.text,c);
+      });
+      a.pairs[input]=[...map.values()];
+    }
+  });
+  save();renderAll();alert(`${removed}件の重複候補を統合しました。`);
 };
 
 document.querySelectorAll("[data-text]").forEach(b=>b.onclick=()=>document.getElementById("plazaInput").value=b.dataset.text);
@@ -464,13 +768,14 @@ document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
   document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));
   document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));
   b.classList.add("active");document.getElementById(b.dataset.tab).classList.add("active");
+  if(b.dataset.tab==="stats")renderStats();
 });
 document.getElementById("personalInput").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();document.getElementById("personalSend").click()}});
 document.getElementById("plazaInput").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();document.getElementById("plazaSend").click()}});
 
 document.getElementById("exportBtn").onclick=()=>{
   const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
-  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="人工無能データ_v3.json";a.click();URL.revokeObjectURL(a.href);
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="人工無能データ_v4.json";a.click();URL.revokeObjectURL(a.href);
 };
 document.getElementById("importBtn").onclick=()=>document.getElementById("fileInput").click();
 document.getElementById("fileInput").onchange=async e=>{
@@ -478,11 +783,15 @@ document.getElementById("fileInput").onchange=async e=>{
   try{
     const x=JSON.parse(await file.text());
     state=x;
-    state.agents=(x.agents||[]).map(o=>Object.assign(new Agent(o.name,o.rate,o.color),o));
+    state.version=VERSION;
+    state.agents=(x.agents||[]).map(migrateAgent);
     state.settings=Object.assign(defaults().settings,x.settings||{});
+    state.plazaLog=Array.isArray(x.plazaLog)?x.plazaLog:[];
+    state.plazaRecent=Array.isArray(x.plazaRecent)?x.plazaRecent:
+      state.plazaLog.filter(m=>m.who!=="system").slice(-18).map(m=>m.text);
     if(!state.agents.length)throw new Error();
-    save();renderAll();
-  }catch{alert("読み込みに失敗しました。壊れたJSONまで学習するほど無能ではありません。")}
+    save();renderAll();alert("データを読み込みました。");
+  }catch{alert("読み込み失敗。壊れたJSONまで受け入れるほど無能ではありません。")}
 };
 document.getElementById("resetAll").onclick=()=>{
   if(confirm("全個体・全辞書・全ログを消しますか？")){state=defaults();save();renderAll()}
