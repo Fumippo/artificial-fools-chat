@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>人工無能チャット v4.3</title>
+<title>人工無能チャット v4.3.1</title>
 <style>
 :root{
   --bg:#0f1319;--panel:#171d26;--panel2:#212936;--line:#344052;
@@ -74,7 +74,7 @@ textarea{min-height:58px;resize:vertical}
 <body>
 <div class="app">
 <aside>
-  <h1>人工無能チャット v4.3</h1>
+  <h1>人工無能チャット v4.3.1</h1>
   <div class="small">語録の突然変異は残し、全員唱和と同文連打だけ抑えます。完全に正常化したら、この企画の存在意義が蒸発します。</div>
 
   <div class="card">
@@ -1095,7 +1095,7 @@ document.getElementById("cleanFallback").onclick=()=>{
           c.echoPenalty=Math.min(c.echoPenalty||1,.18);
           weakened++;
         }
-        if(c.text===input&&c.kind==="context"){removed++;continue}
+        if(c.text===input&&c.kind==="context"){removed++;return}
         next.push(c);
       });
       a.pairs[input]=next;
