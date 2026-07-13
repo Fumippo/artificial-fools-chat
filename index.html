@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>人工無能チャット v4.3.1</title>
+<title>人工無能チャット v4.4</title>
 <style>
 :root{
   --bg:#0f1319;--panel:#171d26;--panel2:#212936;--line:#344052;
@@ -74,7 +74,7 @@ textarea{min-height:58px;resize:vertical}
 <body>
 <div class="app">
 <aside>
-  <h1>人工無能チャット v4.3.1</h1>
+  <h1>人工無能チャット v4.4</h1>
   <div class="small">語録の突然変異は残し、全員唱和と同文連打だけ抑えます。完全に正常化したら、この企画の存在意義が蒸発します。</div>
 
   <div class="card">
@@ -84,6 +84,9 @@ textarea{min-height:58px;resize:vertical}
     <input id="newRate" type="range" min="5" max="95" value="50">
     <label>得意語（カンマ区切り）</label>
     <input id="newFav" placeholder="例：神社, UDK, RU">
+    <label class="toggle"><input id="inheritDictionary" type="checkbox" checked> 既存個体の辞書を引き継ぐ</label>
+    <label>引き継ぎ量 <span id="inheritAmountText">70%</span></label>
+    <input id="inheritAmount" type="range" min="10" max="100" value="70">
     <button id="addAgent" class="primary" style="width:100%;margin-top:8px">作成</button>
   </div>
 
@@ -117,9 +120,9 @@ textarea{min-height:58px;resize:vertical}
 
     <label class="toggle"><input id="greetingRescue" type="checkbox" checked> 挨拶には最低1体が返す</label>
     <label class="toggle"><input id="contextFallback" type="checkbox" checked> 関連候補不足時に会話補完</label>
+    <label class="toggle"><input id="strictFallbackIsolation" type="checkbox" checked> 会話補完を完全隔離する</label>
     <label class="toggle"><input id="humanTurnLearning" type="checkbox" checked> 次の人間発言から会話を学ぶ</label>
-    <label class="toggle"><input id="learnFallback" type="checkbox"> 会話補完も辞書に学習する（非推奨）</label>
-    <button id="cleanFallback" class="red" style="width:100%;margin-top:8px">辞書内の会話補完汚染を整理</button>
+    <button id="cleanFallback" class="red" style="width:100%;margin-top:8px">会話補完汚染を完全削除</button>
 
     <label>広場の表示件数 <span id="displayLimitText">500</span></label>
     <input id="displayLimit" type="range" min="100" max="2000" step="100" value="500">
@@ -205,6 +208,7 @@ textarea{min-height:58px;resize:vertical}
         <label>得意語ボーナス <span id="favBoostText">1.8倍</span></label>
         <input id="favBoost" type="range" min="10" max="30" value="18">
         <button id="saveTraits" class="primary" style="width:100%;margin-top:8px">個性を保存</button>
+        <button id="inheritExisting" style="width:100%;margin-top:8px">この個体へ既存辞書を補充</button>
       </div>
     </div>
   </section>
@@ -354,6 +358,44 @@ function intentCompatibility(inputIntent,triggerIntent,responseText){
   return .65;
 }
 
+
+const FALLBACK_POLLUTION_PATTERNS=[
+  /について話して/,
+  /についての質問/,
+  /どのことについて/,
+  /それで.{0,5}どうなり/,
+  /もう少し.{0,8}(聞かせ|詳しく)/,
+  /そういうこと/,
+  /それは面白/,
+  /ちょっと意外/,
+  /本当ですか/,
+  /勢いがあります/,
+  /びっくりしました/,
+  /どうしてでしょう/,
+  /なるほど/,
+  /そうなんですか/,
+  /そうですね/,
+  /どういたしまして/,
+  /こちらこそ.{0,5}ありがとう/,
+  /私にもよくわかりません/,
+  /場所まではわかりません/,
+  /時間までは覚えていません/,
+  /理由まではわかりません/,
+  /まだ好みが決まっていません/,
+  /広場でみんなの話を聞いていました/,
+  /さっきまで辞書を眺めていました/,
+  /特に何もしていませんでした/
+];
+
+function isFallbackPollution(text){
+  const t=norm(text);
+  return !!t&&FALLBACK_POLLUTION_PATTERNS.some(re=>re.test(t));
+}
+
+function isSafeLearningMessage(msg){
+  return !!(msg&&msg.text&&msg.source!=="context"&&msg.source!=="fallback"&&!isFallbackPollution(msg.text));
+}
+
 function isUsableTopic(topic,text){
   if(!topic||topic.length<2||topic.length>15)return false;
   if(/[！？!?。、…♪↑↓゜∀😂😫]/.test(topic))return false;
@@ -479,6 +521,7 @@ class Agent{
   }
   learnPair(input,reply,kind="learned"){
     input=norm(input);reply=norm(reply);if(!input||!reply)return;
+    if(kind!=="teach"&&(kind==="context"||isFallbackPollution(input)||isFallbackPollution(reply)))return;
     if(!this.pairs[input])this.pairs[input]=[];
     this.pairs[input]=this.pairs[input].map(x=>this.normalizeCandidate(x));
     let found=this.pairs[input].find(x=>x.text===reply);
@@ -577,7 +620,8 @@ class Agent{
   }
   chooseWeighted(candidates,input=""){
     if(!candidates.length)return null;
-    let pool=candidates.map(x=>this.normalizeCandidate(x));
+    let pool=candidates.map(x=>this.normalizeCandidate(x))
+      .filter(c=>c.text&&c.kind!=="context"&&!isFallbackPollution(c.text));
     if(state.settings.avoidExact){
       const fresh=pool.filter(c=>!this.recent.includes(c.text));
       if(fresh.length)pool=fresh;
@@ -609,6 +653,7 @@ class Agent{
   }
   similarReply(text){
     const found=Object.keys(this.pairs)
+      .filter(k=>!isFallbackPollution(k))
       .map(k=>({score:similarity(text,k),key:k}))
       .filter(x=>x.score>=.34)
       .sort((a,b)=>b.score-a.score)
@@ -616,14 +661,19 @@ class Agent{
     if(!found.length)return null;
     let all=[];
     found.forEach(f=>{
-      this.pairs[f.key].map(x=>this.normalizeCandidate(x)).forEach(c=>{
-        all.push(Object.assign({},c,{count:(c.count||1)*f.score}));
-      });
+      this.pairs[f.key].map(x=>this.normalizeCandidate(x))
+        .filter(c=>c.kind!=="context"&&!isFallbackPollution(c.text))
+        .forEach(c=>{
+          all.push(Object.assign({},c,{count:(c.count||1)*f.score}));
+        });
     });
     return this.chooseWeighted(all,text);
   }
   remix(){
-    const corpus=uniq(Object.values(this.pairs).flat().map(x=>this.normalizeCandidate(x).text))
+    const corpus=uniq(Object.values(this.pairs).flat()
+      .map(x=>this.normalizeCandidate(x))
+      .filter(c=>c.kind!=="context"&&!isFallbackPollution(c.text))
+      .map(c=>c.text))
       .filter(x=>x.length>=4&&!state.plazaRecent.includes(x));
     if(corpus.length<4)return null;
     for(let tries=0;tries<12;tries++){
@@ -690,6 +740,69 @@ class Agent{
   }
 }
 
+
+function inheritDictionaryTo(target,amount=.70){
+  const sources=state.agents.filter(a=>a!==target);
+  if(!sources.length)return {inputs:0,replies:0};
+
+  const merged={};
+  const vocab={};
+
+  sources.forEach(a=>{
+    Object.entries(a.pairs||{}).forEach(([input,arr])=>{
+      if(!merged[input])merged[input]=[];
+      (arr||[]).forEach(raw=>{
+        const c=a.normalizeCandidate(raw);
+        if(c.kind==="context"||isFallbackPollution(input)||isFallbackPollution(c.text))return;
+        const key=c.text;
+        const found=merged[input].find(x=>x.text===key);
+        if(found){
+          found.count=Math.min(8,(found.count||1)+(c.count||1)*.35);
+        }else{
+          merged[input].push({
+            text:c.text,
+            count:Math.max(.5,(c.count||1)*.65),
+            used:0,
+            kind:c.kind==="teach"?"learned":c.kind,
+            echoPenalty:c.echoPenalty||1,
+            triggerIntent:c.triggerIntent||classifyIntent(input),
+            triggerTopics:Array.isArray(c.triggerTopics)?c.triggerTopics:extractTopics(input),
+            inherited:true
+          });
+        }
+      });
+    });
+
+    Object.entries(a.vocab||{}).forEach(([word,count])=>{
+      vocab[word]=(vocab[word]||0)+Number(count||0);
+    });
+  });
+
+  const allInputs=Object.keys(merged);
+  const keepCount=Math.max(1,Math.round(allInputs.length*Math.max(.1,Math.min(1,amount))));
+  allInputs.sort((a,b)=>{
+    const sa=merged[a].reduce((s,c)=>s+(c.count||1),0);
+    const sb=merged[b].reduce((s,c)=>s+(c.count||1),0);
+    return sb-sa;
+  });
+
+  const selected=new Set(allInputs.slice(0,keepCount));
+  let replyCount=0;
+  selected.forEach(input=>{
+    const candidates=merged[input]
+      .sort((a,b)=>(b.count||1)-(a.count||1))
+      .slice(0,8);
+    target.pairs[input]=candidates;
+    replyCount+=candidates.length;
+  });
+
+  Object.entries(vocab).forEach(([word,count])=>{
+    target.vocab[word]=Math.max(1,Math.round(count/sources.length));
+  });
+
+  return {inputs:selected.size,replies:replyCount};
+}
+
 function defaults(){
   return{
     version:VERSION,turn:0,
@@ -706,7 +819,7 @@ function defaults(){
       blockChorus:true,showSource:true,displayLimit:500,
       conversationStrength:.72,minRelevance:.22,contextLimit:4,
       greetingRescue:true,contextFallback:true,
-      humanTurnLearning:true,learnFallback:false
+      strictFallbackIsolation:true,humanTurnLearning:true
     }
   };
 }
@@ -895,12 +1008,13 @@ function syncSettings(){
   document.getElementById("showSource").checked=s.showSource;
   document.getElementById("greetingRescue").checked=s.greetingRescue;
   document.getElementById("contextFallback").checked=s.contextFallback;
+  document.getElementById("strictFallbackIsolation").checked=s.strictFallbackIsolation!==false;
   document.getElementById("humanTurnLearning").checked=s.humanTurnLearning;
-  document.getElementById("learnFallback").checked=s.learnFallback;
 }
 function renderAll(){renderAgents();renderPersonal();renderPlaza();renderTraits();renderStats();syncSettings()}
 
 document.getElementById("newRate").oninput=e=>document.getElementById("rateText").textContent=e.target.value+"%";
+document.getElementById("inheritAmount").oninput=e=>document.getElementById("inheritAmountText").textContent=e.target.value+"%";
 document.getElementById("remixRate").oninput=e=>{state.settings.remixRate=Number(e.target.value)/100;save();renderAll()};
 document.getElementById("recentLimit").oninput=e=>{state.settings.recentLimit=Number(e.target.value);save();renderAll()};
 document.getElementById("plazaRecentLimit").oninput=e=>{state.settings.plazaRecentLimit=Number(e.target.value);save();renderAll()};
@@ -915,18 +1029,29 @@ document.getElementById("blockChorus").onchange=e=>{state.settings.blockChorus=e
 document.getElementById("showSource").onchange=e=>{state.settings.showSource=e.target.checked;save();renderAll()};
 document.getElementById("greetingRescue").onchange=e=>{state.settings.greetingRescue=e.target.checked;save()};
 document.getElementById("contextFallback").onchange=e=>{state.settings.contextFallback=e.target.checked;save()};
+document.getElementById("strictFallbackIsolation").onchange=e=>{state.settings.strictFallbackIsolation=e.target.checked;save()};
 document.getElementById("humanTurnLearning").onchange=e=>{state.settings.humanTurnLearning=e.target.checked;save()};
-document.getElementById("learnFallback").onchange=e=>{state.settings.learnFallback=e.target.checked;save()};
 
 document.getElementById("addAgent").onclick=()=>{
   const name=norm(document.getElementById("newName").value);
   const rate=Number(document.getElementById("newRate").value)/100;
   if(!name)return;
   if(state.agents.some(a=>a.name===name)){alert("同名個体がいます。量産型にも限度があります。");return}
+
   const a=new Agent(name,rate,COLORS[state.agents.length%COLORS.length]);
   a.favWords=words(document.getElementById("newFav").value);
+
+  let inherited={inputs:0,replies:0};
+  if(document.getElementById("inheritDictionary").checked){
+    const amount=Number(document.getElementById("inheritAmount").value)/100;
+    inherited=inheritDictionaryTo(a,amount);
+  }
+
   state.agents.push(a);
-  state.plazaLog.push({who:"system",text:`${name} が広場に参加しました。`});
+  const note=inherited.replies
+    ? `${name} が広場に参加しました。既存辞書から ${inherited.inputs}入力・${inherited.replies}返答を継承しました。`
+    : `${name} が空の辞書で広場に参加しました。`;
+  state.plazaLog.push({who:"system",text:note});
   save();renderAll();
 };
 
@@ -941,7 +1066,7 @@ document.getElementById("personalSend").onclick=()=>{
     for(let j=a.personalLog.length-1;j>=0;j--){
       const prev=a.personalLog[j];
       if(prev.who===a.name&&prev.text){
-        a.learnPair(prev.text,text,"human");
+        if(isSafeLearningMessage(prev))a.learnPair(prev.text,text,"human");
         break;
       }
       if(prev.who==="あなた")break;
@@ -952,9 +1077,9 @@ document.getElementById("personalSend").onclick=()=>{
   const out=a.reply(text);
   a.personalLog.push({who:"あなた",text},{who:a.name,text:out.text,source:out.source});
 
-  // 会話補完は初期設定では自己学習しない。
-  if(out.source!=="context"||state.settings.learnFallback){
-    a.learnPair(text,out.text,out.source==="remix"?"remix":out.source==="context"?"context":"learned");
+  // 会話補完とその変異は永久に辞書へ入れない。
+  if(out.source!=="context"&&!isFallbackPollution(text)&&!isFallbackPollution(out.text)){
+    a.learnPair(text,out.text,out.source==="remix"?"remix":"learned");
   }
 
   el.value="";save();renderAll();
@@ -975,6 +1100,19 @@ document.getElementById("teachBtn").onclick=()=>{
 
 document.getElementById("traitAgent").onchange=renderTraits;
 document.getElementById("favBoost").oninput=e=>document.getElementById("favBoostText").textContent=(Number(e.target.value)/10).toFixed(1)+"倍";
+document.getElementById("inheritExisting").onclick=()=>{
+  const i=Number(document.getElementById("traitAgent").value||0);
+  const a=state.agents[i];
+  if(!a)return;
+  if(!confirm(`${a.name} に他個体の辞書を70%補充しますか？\n現在の辞書は消さず、候補を追加します。`))return;
+
+  const before=a.distinctCount();
+  const inherited=inheritDictionaryTo(a,.70);
+  const after=a.distinctCount();
+  save();renderAll();
+  alert(`${a.name} に ${inherited.inputs}入力・${inherited.replies}返答を補充しました。\n異なる返答: ${before} → ${after}`);
+};
+
 document.getElementById("saveTraits").onclick=()=>{
   const i=Number(document.getElementById("traitAgent").value||0),a=state.agents[i];if(!a)return;
   a.favWords=words(document.getElementById("favWords").value);
@@ -1004,10 +1142,10 @@ function plazaPost(text,who="あなた"){
     state.plazaLog.push({who:a.name,text:out.text,source:out.source});
     pushPlazaRecent(out.text);
 
-    if(state.settings.plazaLearn&&(out.source!=="context"||state.settings.learnFallback)){
+    if(state.settings.plazaLearn&&out.source!=="context"&&!isFallbackPollution(text)&&!isFallbackPollution(out.text)){
       const echo=similarity(text,out.text);
       if(echo<.94){
-        a.learnPair(text,out.text,out.source==="remix"?"remix":out.source==="context"?"context":"learned");
+        a.learnPair(text,out.text,out.source==="remix"?"remix":"learned");
       }
     }
     count++;
@@ -1041,7 +1179,10 @@ document.getElementById("autoTalk").onclick=async()=>{
     if(autoStop)break;
     state.turn++;
     const speaker=rand(state.agents);
-    const corpus=uniq(Object.values(speaker.pairs).flat().map(x=>speaker.normalizeCandidate(x).text));
+    const corpus=uniq(Object.values(speaker.pairs).flat()
+      .map(x=>speaker.normalizeCandidate(x))
+      .filter(c=>c.kind!=="context"&&!isFallbackPollution(c.text))
+      .map(c=>c.text));
     let starter=corpus.length?rand(corpus):rand(["こんにちは","今日は何をしますか","それはどういう意味ですか？"]);
 
     const fresh=corpus.filter(x=>!state.plazaRecent.includes(x));
@@ -1066,8 +1207,8 @@ document.getElementById("autoTalk").onclick=async()=>{
       state.plazaLog.push({who:a.name,text:out.text,source:out.source});
       pushPlazaRecent(out.text);
 
-      if(state.settings.plazaLearn&&(out.source!=="context"||state.settings.learnFallback)&&similarity(starter,out.text)<.94){
-        a.learnPair(starter,out.text,out.source==="remix"?"remix":out.source==="context"?"context":"learned");
+      if(state.settings.plazaLearn&&out.source!=="context"&&!isFallbackPollution(starter)&&!isFallbackPollution(out.text)&&similarity(starter,out.text)<.94){
+        a.learnPair(starter,out.text,out.source==="remix"?"remix":"learned");
       }
     });
 
@@ -1078,31 +1219,44 @@ document.getElementById("autoTalk").onclick=async()=>{
 document.getElementById("stopAuto").onclick=()=>{autoStop=true};
 
 document.getElementById("cleanFallback").onclick=()=>{
-  const exact=new Set([
-    "なるほど。","それで、どうなりましたか？","そうなんですか！","勢いがありますね。",
-    "びっくりしました。","そうですね。","どうしてでしょうね。","わかりません。",
-    "もう少し詳しく言ってください。","どういたしまして。","こちらこそ、ありがとう。"
-  ]);
-  let weakened=0,removed=0;
+  if(!confirm("会話補完由来の候補・入力・切り貼り変異を辞書から完全削除しますか？"))return;
+
+  let removedInputs=0,removedReplies=0,removedVocab=0;
   state.agents.forEach(a=>{
-    for(const [input,arr] of Object.entries(a.pairs)){
-      const next=[];
-      arr.map(x=>a.normalizeCandidate(x)).forEach(c=>{
-        const looksTopic=/について話しているんですね。$/.test(c.text);
-        if((exact.has(c.text)||looksTopic)&&c.kind!=="teach"&&c.kind!=="human"){
-          c.kind="context";
-          c.count=Math.min(1,c.count||1);
-          c.echoPenalty=Math.min(c.echoPenalty||1,.18);
-          weakened++;
-        }
-        if(c.text===input&&c.kind==="context"){removed++;return}
-        next.push(c);
+    const cleaned={};
+    for(const [input,arr] of Object.entries(a.pairs||{})){
+      if(isFallbackPollution(input)){
+        removedInputs++;
+        removedReplies+=(arr||[]).length;
+        continue;
+      }
+      const next=(arr||[]).map(x=>a.normalizeCandidate(x)).filter(c=>{
+        const bad=c.kind==="context"||isFallbackPollution(c.text);
+        if(bad)removedReplies++;
+        return !bad;
       });
-      a.pairs[input]=next;
+      if(next.length)cleaned[input]=next;
+      else removedInputs++;
     }
+    a.pairs=cleaned;
+
+    for(const word of Object.keys(a.vocab||{})){
+      if(isFallbackPollution(word)){
+        delete a.vocab[word];
+        removedVocab++;
+      }
+    }
+
+    a.recent=(a.recent||[]).filter(x=>!isFallbackPollution(x));
+    a.dialogueContext=(a.dialogueContext||[]).filter(x=>
+      !isFallbackPollution(x.input||"")&&!isFallbackPollution(x.reply||"")
+    );
+    a.fallbackRecent=[];
   });
+
+  state.plazaRecent=(state.plazaRecent||[]).filter(x=>!isFallbackPollution(x));
   save();renderAll();
-  alert(`${weakened}件の補完由来候補を弱体化し、${removed}件を削除しました。`);
+  alert(`完全削除しました。\n入力キー: ${removedInputs}件\n返答候補: ${removedReplies}件\n語彙: ${removedVocab}件`);
 };
 
 document.getElementById("cleanEcho").onclick=()=>{
