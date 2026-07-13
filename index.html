@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>人工無能チャット v4.4</title>
+<title>人工無能チャット v4.7</title>
 <style>
 :root{
   --bg:#0f1319;--panel:#171d26;--panel2:#212936;--line:#344052;
@@ -43,7 +43,7 @@ textarea{min-height:58px;resize:vertical}
 .source{font-size:10px;padding:2px 6px;border-radius:999px;background:#334155;color:#dce6f2}
 .source.teach{background:#27563a}
 .source.remix{background:#654b21}
-.source.echo{background:#6b2f3a}.source.context{background:#29506b}.source.human{background:#4b6530}
+.source.echo{background:#6b2f3a}.source.context{background:#29506b}.source.human{background:#4b6530}.source.phrase{background:#6b5329}
 .composer{padding:12px;border-top:1px solid var(--line);background:#151a22}
 .toolbar{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:8px}
 .toolbar button{font-size:12px}
@@ -74,7 +74,7 @@ textarea{min-height:58px;resize:vertical}
 <body>
 <div class="app">
 <aside>
-  <h1>人工無能チャット v4.4</h1>
+  <h1>人工無能チャット v4.7</h1>
   <div class="small">語録の突然変異は残し、全員唱和と同文連打だけ抑えます。完全に正常化したら、この企画の存在意義が蒸発します。</div>
 
   <div class="card">
@@ -118,11 +118,8 @@ textarea{min-height:58px;resize:vertical}
     <label>文脈記憶ターン <span id="contextText">4</span></label>
     <input id="contextLimit" type="range" min="1" max="10" value="4">
 
-    <label class="toggle"><input id="greetingRescue" type="checkbox" checked> 挨拶には最低1体が返す</label>
-    <label class="toggle"><input id="contextFallback" type="checkbox" checked> 関連候補不足時に会話補完</label>
-    <label class="toggle"><input id="strictFallbackIsolation" type="checkbox" checked> 会話補完を完全隔離する</label>
     <label class="toggle"><input id="humanTurnLearning" type="checkbox" checked> 次の人間発言から会話を学ぶ</label>
-    <button id="cleanFallback" class="red" style="width:100%;margin-top:8px">会話補完汚染を完全削除</button>
+    <button id="cleanFallback" class="red" style="width:100%;margin-top:8px">旧会話補完汚染を完全削除</button>
 
     <label>広場の表示件数 <span id="displayLimitText">500</span></label>
     <input id="displayLimit" type="range" min="100" max="2000" step="100" value="500">
@@ -209,6 +206,7 @@ textarea{min-height:58px;resize:vertical}
         <input id="favBoost" type="range" min="10" max="30" value="18">
         <button id="saveTraits" class="primary" style="width:100%;margin-top:8px">個性を保存</button>
         <button id="inheritExisting" style="width:100%;margin-top:8px">この個体へ既存辞書を補充</button>
+        <button id="restorePhrases" style="width:100%;margin-top:8px">個人チャット履歴から単語記憶を復元</button>
       </div>
     </div>
   </section>
@@ -360,32 +358,16 @@ function intentCompatibility(inputIntent,triggerIntent,responseText){
 
 
 const FALLBACK_POLLUTION_PATTERNS=[
-  /について話して/,
-  /についての質問/,
-  /どのことについて/,
-  /それで.{0,5}どうなり/,
-  /もう少し.{0,8}(聞かせ|詳しく)/,
-  /そういうこと/,
-  /それは面白/,
-  /ちょっと意外/,
-  /本当ですか/,
-  /勢いがあります/,
-  /びっくりしました/,
-  /どうしてでしょう/,
-  /なるほど/,
-  /そうなんですか/,
-  /そうですね/,
-  /どういたしまして/,
-  /こちらこそ.{0,5}ありがとう/,
-  /私にもよくわかりません/,
-  /場所まではわかりません/,
-  /時間までは覚えていません/,
-  /理由まではわかりません/,
-  /まだ好みが決まっていません/,
-  /広場でみんなの話を聞いていました/,
-  /さっきまで辞書を眺めていました/,
-  /特に何もしていませんでした/
-];
+  /について/,/話している/,/話しますか/,/聞かせて/,/詳しく言って/,
+  /どうなりました/,/意味ですか/,/どのこと/,/そういうこと/,
+  /それは面白/,/ちょっと意外/,/本当ですか/,/勢いがあります/,
+  /びっくりしました/,/どうしてでしょう/,/なるほど/,
+  /そうなんですか/,/そうですね/,/どういたしまして/,
+  /こちらこそ/,/よくわかりません/,/場所までは/,/時間までは/,
+  /理由までは/,/好みが決まっていません/,/広場でみんなの話/,
+  /辞書を眺めていました/,/特に何もしていませんでした/,
+  /今日は何を話/,/どうしましたか/,/もう少し/,/意外です/
+]
 
 function isFallbackPollution(text){
   const t=norm(text);
@@ -441,9 +423,8 @@ function conversationFallback(text,agent){
       "また広場で会いましょう。"
     ],
     meaning_question:[
-      `「${topic}」の意味ですか？ 私にはまだうまく説明できません。`,
-      "私にもよくわかりません。",
-      "もう少し詳しく言ってください。"
+      "意味はまだ説明できません。",
+      "わかりません。"
     ],
     activity_question:[
       "広場でみんなの話を聞いていました。",
@@ -477,8 +458,7 @@ function conversationFallback(text,agent){
     ],
     question:[
       "わかりません。",
-      "もう少し詳しく言ってください。",
-      topic?`${topic}についての質問ですか？`:"どのことについての質問ですか？"
+      "質問の内容をまだ理解できません。"
     ],
     agreement:[
       "そうですね。",
@@ -491,13 +471,10 @@ function conversationFallback(text,agent){
       "勢いがありますね。"
     ],
     statement:[
-      ...(topic?[`${topic}について話しているんですね。`]:[]),
-      "なるほど。",
-      "そういうことですか。",
-      "もう少し聞かせてください。",
-      "それは面白いですね。",
-      "本当ですか？",
-      "ちょっと意外です。"
+      "そうですか。",
+      "へえ。",
+      "たしかに。",
+      "そうなんですね。"
     ]
   };
   return{ text:pickFresh(choices[intent]||choices.statement),source:"context" };
@@ -510,10 +487,66 @@ class Agent{
     this.favWords=[];this.avoidWords=[];this.favBoost=1.8;
     this.dialogueContext=[];
     this.fallbackRecent=[];
-    this.stats={spoken:0,remix:0,echo:0,teach:0,context:0};
+    this.phrases=[];
+    this.stats={spoken:0,remix:0,echo:0,teach:0,context:0,phrase:0};
   }
   learnText(text){
-    grams(text).forEach(g=>this.vocab[g]=(this.vocab[g]||0)+1);
+    if(isFallbackPollution(text))return;
+    grams(text).forEach(g=>{
+      if(!isFallbackPollution(g))this.vocab[g]=(this.vocab[g]||0)+1;
+    });
+  }
+  learnPhrase(text,kind="human"){
+    text=norm(text);
+    if(!text||isFallbackPollution(text))return;
+    if(text.length>120)return;
+    let found=this.phrases.find(x=>x.text===text);
+    if(found){
+      found.count=Math.min(12,(found.count||1)+1);
+      if(kind==="teach")found.kind="teach";
+    }else{
+      this.phrases.push({
+        text,count:kind==="teach"?4:1,used:0,kind,
+        topics:extractTopics(text),intent:classifyIntent(text)
+      });
+    }
+    if(this.phrases.length>500){
+      this.phrases.sort((a,b)=>(b.count||1)-(a.count||1));
+      this.phrases=this.phrases.slice(0,500);
+    }
+    this.learnText(text);
+  }
+  phraseReply(input){
+    const clean=this.phrases.filter(p=>
+      p.text&&!isFallbackPollution(p.text)&&
+      !this.recent.includes(p.text)&&
+      !state.plazaRecent.includes(p.text)
+    );
+    if(!clean.length)return null;
+
+    const inTopics=extractTopics(input);
+    const inIntent=classifyIntent(input);
+    const scored=clean.map(p=>{
+      let score=.12+(p.count||1)*.08;
+      score+=topicOverlap(inTopics,p.topics||extractTopics(p.text))*1.7;
+      if(p.intent===inIntent)score+=.35;
+      score*=this.traitMultiplier(p.text);
+      return {p,score};
+    }).sort((a,b)=>b.score-a.score);
+
+    const pool=scored.slice(0,Math.min(12,scored.length));
+    const total=pool.reduce((s,x)=>s+Math.max(.01,x.score),0);
+    let r=Math.random()*total;
+    for(const x of pool){
+      r-=Math.max(.01,x.score);
+      if(r<=0){
+        x.p.used=(x.p.used||0)+1;
+        return {text:x.p.text,source:"phrase"};
+      }
+    }
+    const p=pool[0].p;
+    p.used=(p.used||0)+1;
+    return {text:p.text,source:"phrase"};
   }
   normalizeCandidate(c){
     if(typeof c==="string")return{text:c,count:1,used:0,kind:"learned",echoPenalty:1,triggerIntent:null,triggerTopics:[]};
@@ -648,7 +681,9 @@ class Agent{
     return{text:pool[pool.length-1].text,source:pool[pool.length-1].kind||"learned"};
   }
   exactReply(text){
-    const arr=(this.pairs[norm(text)]||[]).map(x=>this.normalizeCandidate(x));
+    const key=norm(text);
+    if(isFallbackPollution(key))return null;
+    const arr=(this.pairs[key]||[]).map(x=>this.normalizeCandidate(x));
     return this.chooseWeighted(arr,text);
   }
   similarReply(text){
@@ -670,11 +705,13 @@ class Agent{
     return this.chooseWeighted(all,text);
   }
   remix(){
-    const corpus=uniq(Object.values(this.pairs).flat()
-      .map(x=>this.normalizeCandidate(x))
-      .filter(c=>c.kind!=="context"&&!isFallbackPollution(c.text))
-      .map(c=>c.text))
-      .filter(x=>x.length>=4&&!state.plazaRecent.includes(x));
+    const corpus=uniq([
+      ...Object.values(this.pairs).flat()
+        .map(x=>this.normalizeCandidate(x))
+        .filter(c=>c.kind!=="context"&&!isFallbackPollution(c.text))
+        .map(c=>c.text),
+      ...(this.phrases||[]).map(x=>x.text).filter(x=>!isFallbackPollution(x))
+    ]).filter(x=>x.length>=4&&!state.plazaRecent.includes(x));
     if(corpus.length<4)return null;
     for(let tries=0;tries<12;tries++){
       const a=rand(corpus),b=rand(corpus);if(a===b)continue;
@@ -707,23 +744,22 @@ class Agent{
       out=null;
     }
 
+    if(!out&&this.phrases.length&&Math.random()<.82){
+      out=this.phraseReply(text);
+    }
+
     const allowRemix=!["greeting","thanks","apology","farewell","meaning_question","activity_question","who_question","where_question","when_question","why_question"].includes(inputIntent);
-    if(!out&&allowRemix&&Math.random()<state.settings.remixRate)out=this.remix();
-
-    if(!out&&state.settings.contextFallback){
-      out=conversationFallback(text,this);
+    if(!out&&allowRemix&&Math.random()<state.settings.remixRate){
+      out=this.remix();
     }
 
-    if(!out){
-      if(text.includes("こんにちは"))out={text:"こんにちは",source:"fallback"};
-      else if(/[?？]/.test(text))out={text:"わかりません",source:"fallback"};
-      else out={text:norm(text),source:"echo"};
-    }
+    // 会話補完・固定相づち・オウム返しは生成しない。
+    if(!out)return null;
 
     if(state.settings.blockChorus&&state.plazaRecent.includes(out.text)){
-      const alt=this.similarReply(text);
+      const alt=this.similarReply(text)||this.phraseReply(text)||this.remix();
       if(alt&&!state.plazaRecent.includes(alt.text))out=alt;
-      else if(state.settings.contextFallback)out=conversationFallback(text,this);
+      else return null;
     }
 
     this.remember(out.text);
@@ -732,11 +768,14 @@ class Agent{
     if(out.source==="remix")this.stats.remix=(this.stats.remix||0)+1;
     if(out.source==="echo")this.stats.echo=(this.stats.echo||0)+1;
     if(out.source==="teach")this.stats.teach=(this.stats.teach||0)+1;
-    if(out.source==="context")this.stats.context=(this.stats.context||0)+1;
+    if(out.source==="phrase")this.stats.phrase=(this.stats.phrase||0)+1;
     return out;
   }
   distinctCount(){
-    return uniq(Object.values(this.pairs).flat().map(x=>this.normalizeCandidate(x).text)).length;
+    return uniq([
+      ...Object.values(this.pairs).flat().map(x=>this.normalizeCandidate(x).text),
+      ...(this.phrases||[]).map(x=>x.text)
+    ]).length;
   }
 }
 
@@ -747,6 +786,7 @@ function inheritDictionaryTo(target,amount=.70){
 
   const merged={};
   const vocab={};
+  const inheritedPhrases={};
 
   sources.forEach(a=>{
     Object.entries(a.pairs||{}).forEach(([input,arr])=>{
@@ -776,6 +816,10 @@ function inheritDictionaryTo(target,amount=.70){
     Object.entries(a.vocab||{}).forEach(([word,count])=>{
       vocab[word]=(vocab[word]||0)+Number(count||0);
     });
+    (a.phrases||[]).forEach(p=>{
+      if(!p.text||isFallbackPollution(p.text))return;
+      inheritedPhrases[p.text]=(inheritedPhrases[p.text]||0)+(p.count||1);
+    });
   });
 
   const allInputs=Object.keys(merged);
@@ -800,6 +844,15 @@ function inheritDictionaryTo(target,amount=.70){
     target.vocab[word]=Math.max(1,Math.round(count/sources.length));
   });
 
+  Object.entries(inheritedPhrases)
+    .sort((a,b)=>b[1]-a[1])
+    .slice(0,Math.max(20,Math.round(Object.keys(inheritedPhrases).length*amount)))
+    .forEach(([text,count])=>{
+      target.learnPhrase(text,"inherited");
+      const p=target.phrases.find(x=>x.text===text);
+      if(p)p.count=Math.max(1,Math.round(count/sources.length));
+    });
+
   return {inputs:selected.size,replies:replyCount};
 }
 
@@ -818,8 +871,7 @@ function defaults(){
       echoPenalty:.95,plazaLearn:true,avoidExact:true,
       blockChorus:true,showSource:true,displayLimit:500,
       conversationStrength:.72,minRelevance:.22,contextLimit:4,
-      greetingRescue:true,contextFallback:true,
-      strictFallbackIsolation:true,humanTurnLearning:true
+      humanTurnLearning:true
     }
   };
 }
@@ -832,10 +884,13 @@ function migrateAgent(o){
   a.favWords=Array.isArray(o.favWords)?o.favWords:[];
   a.avoidWords=Array.isArray(o.avoidWords)?o.avoidWords:[];
   a.favBoost=Number(o.favBoost||1.8);
-  a.stats=Object.assign({spoken:0,remix:0,echo:0,teach:0,context:0},o.stats||{});
+  a.stats=Object.assign({spoken:0,remix:0,echo:0,teach:0,context:0,phrase:0},o.stats||{});
   a.recent=Array.isArray(o.recent)?o.recent:[];
   a.dialogueContext=Array.isArray(o.dialogueContext)?o.dialogueContext:[];
   a.fallbackRecent=Array.isArray(o.fallbackRecent)?o.fallbackRecent:[];
+  a.phrases=Array.isArray(o.phrases)?o.phrases.map(p=>
+    typeof p==="string"?{text:p,count:1,used:0,kind:"human",topics:extractTopics(p),intent:classifyIntent(p)}:p
+  ):[];
   a.personalLog=Array.isArray(o.personalLog)?o.personalLog:[];
   for(const k of Object.keys(a.pairs||{})){
     a.pairs[k]=(a.pairs[k]||[]).map(x=>a.normalizeCandidate(x));
@@ -864,7 +919,7 @@ function pushPlazaRecent(text){
   while(state.plazaRecent.length>state.settings.plazaRecentLimit)state.plazaRecent.shift();
 }
 function sourceLabel(s){
-  return({teach:"教師",human:"人間会話",learned:"学習",remix:"切り貼り",fallback:"初期返答",echo:"オウム返し",context:"会話補完"}[s]||s||"");
+  return({teach:"教師",human:"人間会話",phrase:"単語記憶",learned:"学習",remix:"切り貼り",echo:"オウム返し"}[s]||s||"");
 }
 
 function renderAgents(){
@@ -882,7 +937,7 @@ function renderAgents(){
     </div>`;
     d.querySelector('[data-act="reset"]').onclick=()=>{
       if(confirm(`${a.name} の辞書と個人ログを消しますか？`)){
-        a.pairs={};a.vocab={};a.recent=[];a.dialogueContext=[];a.fallbackRecent=[];a.personalLog=[];a.stats={spoken:0,remix:0,echo:0,teach:0,context:0};
+        a.pairs={};a.vocab={};a.phrases=[];a.recent=[];a.dialogueContext=[];a.fallbackRecent=[];a.personalLog=[];a.stats={spoken:0,remix:0,echo:0,teach:0,context:0,phrase:0};
         save();renderAll();
       }
     };
@@ -975,9 +1030,9 @@ function renderStats(){
     広場学習: ${state.settings.plazaLearn?'ON':'OFF'}
   `;
 
-  let table='<table class="table"><tr><th>個体</th><th>異なる返答</th><th>発言</th><th>切り貼り</th><th>会話補完</th><th>オウム</th><th>教師採用</th></tr>';
+  let table='<table class="table"><tr><th>個体</th><th>異なる返答</th><th>発言</th><th>切り貼り</th><th>単語記憶</th><th>オウム</th><th>教師採用</th></tr>';
   state.agents.forEach(a=>{
-    table+=`<tr><td>${esc(a.name)}</td><td>${a.distinctCount()}</td><td>${a.stats.spoken||0}</td><td>${a.stats.remix||0}</td><td>${a.stats.context||0}</td><td>${a.stats.echo||0}</td><td>${a.stats.teach||0}</td></tr>`;
+    table+=`<tr><td>${esc(a.name)}</td><td>${a.distinctCount()}</td><td>${a.stats.spoken||0}</td><td>${a.stats.remix||0}</td><td>${a.stats.phrase||0}</td><td>${a.stats.echo||0}</td><td>${a.stats.teach||0}</td></tr>`;
   });
   table+='</table>';
   document.getElementById("agentStats").innerHTML=table;
@@ -1006,9 +1061,6 @@ function syncSettings(){
   document.getElementById("avoidExact").checked=s.avoidExact;
   document.getElementById("blockChorus").checked=s.blockChorus;
   document.getElementById("showSource").checked=s.showSource;
-  document.getElementById("greetingRescue").checked=s.greetingRescue;
-  document.getElementById("contextFallback").checked=s.contextFallback;
-  document.getElementById("strictFallbackIsolation").checked=s.strictFallbackIsolation!==false;
   document.getElementById("humanTurnLearning").checked=s.humanTurnLearning;
 }
 function renderAll(){renderAgents();renderPersonal();renderPlaza();renderTraits();renderStats();syncSettings()}
@@ -1027,9 +1079,6 @@ document.getElementById("plazaLearn").onchange=e=>{state.settings.plazaLearn=e.t
 document.getElementById("avoidExact").onchange=e=>{state.settings.avoidExact=e.target.checked;save()};
 document.getElementById("blockChorus").onchange=e=>{state.settings.blockChorus=e.target.checked;save()};
 document.getElementById("showSource").onchange=e=>{state.settings.showSource=e.target.checked;save();renderAll()};
-document.getElementById("greetingRescue").onchange=e=>{state.settings.greetingRescue=e.target.checked;save()};
-document.getElementById("contextFallback").onchange=e=>{state.settings.contextFallback=e.target.checked;save()};
-document.getElementById("strictFallbackIsolation").onchange=e=>{state.settings.strictFallbackIsolation=e.target.checked;save()};
 document.getElementById("humanTurnLearning").onchange=e=>{state.settings.humanTurnLearning=e.target.checked;save()};
 
 document.getElementById("addAgent").onclick=()=>{
@@ -1073,13 +1122,20 @@ document.getElementById("personalSend").onclick=()=>{
     }
   }
 
-  a.learnText(text);
+  a.learnPhrase(text,"human");
   const out=a.reply(text);
-  a.personalLog.push({who:"あなた",text},{who:a.name,text:out.text,source:out.source});
+  a.personalLog.push({who:"あなた",text});
 
-  // 会話補完とその変異は永久に辞書へ入れない。
-  if(out.source!=="context"&&!isFallbackPollution(text)&&!isFallbackPollution(out.text)){
-    a.learnPair(text,out.text,out.source==="remix"?"remix":"learned");
+  if(out){
+    a.personalLog.push({who:a.name,text:out.text,source:out.source});
+    if(!isFallbackPollution(text)&&!isFallbackPollution(out.text)){
+      a.learnPair(text,out.text,out.source==="remix"?"remix":"learned");
+    }
+  }else{
+    a.personalLog.push({
+      who:"system",
+      text:"返答候補がありませんでした。入力内容は単語記憶に保存されました。"
+    });
   }
 
   el.value="";save();renderAll();
@@ -1092,6 +1148,7 @@ document.getElementById("teachBtn").onclick=()=>{
   const reply=norm(document.getElementById("teachReply").value);
   if(!a||!input||!reply){alert("入力と返答の両方を書いてください。");return}
   a.learnPair(input,reply,"teach");
+  a.learnPhrase(reply,"teach");
   a.personalLog.push({who:"教師",text:`「${input}」→「${reply}」を登録`,source:"teach"});
   document.getElementById("teachInput").value="";
   document.getElementById("teachReply").value="";
@@ -1100,6 +1157,22 @@ document.getElementById("teachBtn").onclick=()=>{
 
 document.getElementById("traitAgent").onchange=renderTraits;
 document.getElementById("favBoost").oninput=e=>document.getElementById("favBoostText").textContent=(Number(e.target.value)/10).toFixed(1)+"倍";
+document.getElementById("restorePhrases").onclick=()=>{
+  const i=Number(document.getElementById("traitAgent").value||0);
+  const a=state.agents[i];
+  if(!a)return;
+  let added=0;
+  (a.personalLog||[]).forEach(m=>{
+    if(m.who==="あなた"&&m.text&&!isFallbackPollution(m.text)){
+      const before=a.phrases.length;
+      a.learnPhrase(m.text,"human");
+      if(a.phrases.length>before)added++;
+    }
+  });
+  save();renderAll();
+  alert(`${a.name} の個人チャット履歴から ${added}件の単語・発言を復元しました。`);
+};
+
 document.getElementById("inheritExisting").onclick=()=>{
   const i=Number(document.getElementById("traitAgent").value||0);
   const a=state.agents[i];
@@ -1131,6 +1204,7 @@ function plazaPost(text,who="あなた"){
   [...state.agents].sort(()=>Math.random()-.5).forEach(a=>{
     if(!a.shouldReply(text))return;
     let out=a.reply(text);
+    if(!out)return;
 
     if(state.settings.blockChorus&&spokenThisTurn.has(out.text)){
       const alt=a.similarReply(text)||a.remix();
@@ -1151,17 +1225,6 @@ function plazaPost(text,who="あなた"){
     count++;
   });
 
-  if(!count&&state.settings.greetingRescue&&classifyIntent(text)==="greeting"){
-    const a=rand(state.agents);
-    const out=conversationFallback(text,a);
-    a.remember(out.text);
-    a.rememberContext(text,out.text);
-    a.stats.spoken=(a.stats.spoken||0)+1;
-    a.stats.context=(a.stats.context||0)+1;
-    state.plazaLog.push({who:a.name,text:out.text,source:out.source});
-    pushPlazaRecent(out.text);
-    count++;
-  }
 
   if(!count)state.plazaLog.push({who:"system",text:"……誰も反応しませんでした。"});
   save();renderAll();
@@ -1179,23 +1242,34 @@ document.getElementById("autoTalk").onclick=async()=>{
     if(autoStop)break;
     state.turn++;
     const speaker=rand(state.agents);
-    const corpus=uniq(Object.values(speaker.pairs).flat()
-      .map(x=>speaker.normalizeCandidate(x))
-      .filter(c=>c.kind!=="context"&&!isFallbackPollution(c.text))
-      .map(c=>c.text));
-    let starter=corpus.length?rand(corpus):rand(["こんにちは","今日は何をしますか","それはどういう意味ですか？"]);
+    const corpus=uniq([
+      ...Object.values(speaker.pairs).flat()
+        .map(x=>speaker.normalizeCandidate(x))
+        .filter(c=>c.kind!=="context"&&!isFallbackPollution(c.text))
+        .map(c=>c.text),
+      ...(speaker.phrases||[]).map(x=>x.text).filter(x=>!isFallbackPollution(x))
+    ]);
+    if(!corpus.length){
+      state.plazaLog.push({who:"system",text:`${speaker.name} には発言候補がありません。`});
+      save();renderAll();
+      await new Promise(res=>setTimeout(res,120));
+      continue;
+    }
+    let starter=rand(corpus);
 
     const fresh=corpus.filter(x=>!state.plazaRecent.includes(x));
     if(fresh.length)starter=rand(fresh);
 
     speaker.remember(starter);
-    state.plazaLog.push({who:speaker.name,text:starter,source:"learned"});
+    const starterSource=(speaker.phrases||[]).some(p=>p.text===starter)?"phrase":"learned";
+    state.plazaLog.push({who:speaker.name,text:starter,source:starterSource});
     pushPlazaRecent(starter);
 
     const spokenThisTurn=new Set([starter]);
     [...state.agents].filter(a=>a!==speaker).sort(()=>Math.random()-.5).forEach(a=>{
       if(!a.shouldReply(starter))return;
       let out=a.reply(starter);
+      if(!out)return;
 
       if(state.settings.blockChorus&&spokenThisTurn.has(out.text)){
         const alt=a.similarReply(starter)||a.remix();
@@ -1219,9 +1293,9 @@ document.getElementById("autoTalk").onclick=async()=>{
 document.getElementById("stopAuto").onclick=()=>{autoStop=true};
 
 document.getElementById("cleanFallback").onclick=()=>{
-  if(!confirm("会話補完由来の候補・入力・切り貼り変異を辞書から完全削除しますか？"))return;
+  if(!confirm("会話補完由来・補完変異らしい候補を辞書から強制削除しますか？"))return;
 
-  let removedInputs=0,removedReplies=0,removedVocab=0;
+  let removedInputs=0,removedReplies=0,removedVocab=0,removedRecent=0;
   state.agents.forEach(a=>{
     const cleaned={};
     for(const [input,arr] of Object.entries(a.pairs||{})){
@@ -1247,7 +1321,9 @@ document.getElementById("cleanFallback").onclick=()=>{
       }
     }
 
+    const before=(a.recent||[]).length;
     a.recent=(a.recent||[]).filter(x=>!isFallbackPollution(x));
+    removedRecent+=before-a.recent.length;
     a.dialogueContext=(a.dialogueContext||[]).filter(x=>
       !isFallbackPollution(x.input||"")&&!isFallbackPollution(x.reply||"")
     );
@@ -1256,7 +1332,7 @@ document.getElementById("cleanFallback").onclick=()=>{
 
   state.plazaRecent=(state.plazaRecent||[]).filter(x=>!isFallbackPollution(x));
   save();renderAll();
-  alert(`完全削除しました。\n入力キー: ${removedInputs}件\n返答候補: ${removedReplies}件\n語彙: ${removedVocab}件`);
+  alert(`強制削除しました。\n入力キー: ${removedInputs}件\n返答候補: ${removedReplies}件\n語彙: ${removedVocab}件\n直近履歴: ${removedRecent}件`);
 };
 
 document.getElementById("cleanEcho").onclick=()=>{
