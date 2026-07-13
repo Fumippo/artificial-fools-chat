@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>人工無能チャット v4.2</title>
+<title>人工無能チャット v4.3</title>
 <style>
 :root{
   --bg:#0f1319;--panel:#171d26;--panel2:#212936;--line:#344052;
@@ -43,7 +43,7 @@ textarea{min-height:58px;resize:vertical}
 .source{font-size:10px;padding:2px 6px;border-radius:999px;background:#334155;color:#dce6f2}
 .source.teach{background:#27563a}
 .source.remix{background:#654b21}
-.source.echo{background:#6b2f3a}.source.context{background:#29506b}
+.source.echo{background:#6b2f3a}.source.context{background:#29506b}.source.human{background:#4b6530}
 .composer{padding:12px;border-top:1px solid var(--line);background:#151a22}
 .toolbar{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:8px}
 .toolbar button{font-size:12px}
@@ -74,7 +74,7 @@ textarea{min-height:58px;resize:vertical}
 <body>
 <div class="app">
 <aside>
-  <h1>人工無能チャット v4.2</h1>
+  <h1>人工無能チャット v4.3</h1>
   <div class="small">語録の突然変異は残し、全員唱和と同文連打だけ抑えます。完全に正常化したら、この企画の存在意義が蒸発します。</div>
 
   <div class="card">
@@ -117,6 +117,9 @@ textarea{min-height:58px;resize:vertical}
 
     <label class="toggle"><input id="greetingRescue" type="checkbox" checked> 挨拶には最低1体が返す</label>
     <label class="toggle"><input id="contextFallback" type="checkbox" checked> 関連候補不足時に会話補完</label>
+    <label class="toggle"><input id="humanTurnLearning" type="checkbox" checked> 次の人間発言から会話を学ぶ</label>
+    <label class="toggle"><input id="learnFallback" type="checkbox"> 会話補完も辞書に学習する（非推奨）</label>
+    <button id="cleanFallback" class="red" style="width:100%;margin-top:8px">辞書内の会話補完汚染を整理</button>
 
     <label>広場の表示件数 <span id="displayLimitText">500</span></label>
     <input id="displayLimit" type="range" min="100" max="2000" step="100" value="500">
@@ -351,10 +354,29 @@ function intentCompatibility(inputIntent,triggerIntent,responseText){
   return .65;
 }
 
+function isUsableTopic(topic,text){
+  if(!topic||topic.length<2||topic.length>15)return false;
+  if(/[！？!?。、…♪↑↓゜∀😂😫]/.test(topic))return false;
+  if(/(なるほど|そうなん|うわー|変なの|酷い|悲しい|もうね|入って|よく来た|それじゃあ|こっつ|ぷる|ちりーん|くっしゅ|ぽぺ|クソ|ゴミ|うんち)$/.test(topic))return false;
+  if(/(て|で|た|ない|ます|です|する|した|いる|だった|ね|よ)$/.test(topic))return false;
+  return /^[一-龥ぁ-んァ-ヶA-Za-z0-9ー・]+$/.test(topic);
+}
+
 function conversationFallback(text,agent){
   const intent=classifyIntent(text);
   const topics=extractTopics(text);
-  const topic=topics[0]||"それ";
+  const topic=topics.find(x=>isUsableTopic(x,text))||"";
+  const recentFallback=(agent&&agent.fallbackRecent)||[];
+  const pickFresh=arr=>{
+    const fresh=arr.filter(x=>!recentFallback.includes(x));
+    const chosen=rand(fresh.length?fresh:arr);
+    if(agent){
+      agent.fallbackRecent=agent.fallbackRecent||[];
+      agent.fallbackRecent.push(chosen);
+      while(agent.fallbackRecent.length>8)agent.fallbackRecent.shift();
+    }
+    return chosen;
+  };
   const choices={
     greeting:[
       "こんにちは。どうしましたか？",
@@ -404,17 +426,17 @@ function conversationFallback(text,agent){
     why_question:[
       "理由まではわかりません。",
       "どうしてでしょうね。",
-      `${topic}が関係しているのかもしれません。`
+      topic?`${topic}が関係しているのかもしれません。`:"何か理由があるのかもしれません。"
     ],
     preference_question:[
-      `私は${topic}について、まだ好みが決まっていません。`,
+      topic?`私は${topic}について、まだ好みが決まっていません。`:"まだ好みが決まっていません。",
       "嫌いではありません。",
       "どちらとも言えません。"
     ],
     question:[
       "わかりません。",
       "もう少し詳しく言ってください。",
-      `${topic}についての質問ですか？`
+      topic?`${topic}についての質問ですか？`:"どのことについての質問ですか？"
     ],
     agreement:[
       "そうですね。",
@@ -427,12 +449,16 @@ function conversationFallback(text,agent){
       "勢いがありますね。"
     ],
     statement:[
-      `${topic}について話しているんですね。`,
+      ...(topic?[`${topic}について話しているんですね。`]:[]),
       "なるほど。",
-      "それで、どうなりましたか？"
+      "そういうことですか。",
+      "もう少し聞かせてください。",
+      "それは面白いですね。",
+      "本当ですか？",
+      "ちょっと意外です。"
     ]
   };
-  return{ text:rand(choices[intent]||choices.statement),source:"context" };
+  return{ text:pickFresh(choices[intent]||choices.statement),source:"context" };
 }
 
 class Agent{
@@ -441,6 +467,7 @@ class Agent{
     this.pairs={};this.vocab={};this.recent=[];this.personalLog=[];
     this.favWords=[];this.avoidWords=[];this.favBoost=1.8;
     this.dialogueContext=[];
+    this.fallbackRecent=[];
     this.stats={spoken:0,remix:0,echo:0,teach:0,context:0};
   }
   learnText(text){
@@ -523,6 +550,8 @@ class Agent{
     c=this.normalizeCandidate(c);
     let score=(c.count||1)/(1+(c.used||0)*.65);
     if(c.kind==="teach")score*=2.8;
+    if(c.kind==="human")score*=2.6;
+    if(c.kind==="context")score*=.28;
     score*=this.traitMultiplier(c.text);
     score*=c.echoPenalty||1;
 
@@ -676,7 +705,8 @@ function defaults(){
       echoPenalty:.95,plazaLearn:true,avoidExact:true,
       blockChorus:true,showSource:true,displayLimit:500,
       conversationStrength:.72,minRelevance:.22,contextLimit:4,
-      greetingRescue:true,contextFallback:true
+      greetingRescue:true,contextFallback:true,
+      humanTurnLearning:true,learnFallback:false
     }
   };
 }
@@ -692,6 +722,7 @@ function migrateAgent(o){
   a.stats=Object.assign({spoken:0,remix:0,echo:0,teach:0,context:0},o.stats||{});
   a.recent=Array.isArray(o.recent)?o.recent:[];
   a.dialogueContext=Array.isArray(o.dialogueContext)?o.dialogueContext:[];
+  a.fallbackRecent=Array.isArray(o.fallbackRecent)?o.fallbackRecent:[];
   a.personalLog=Array.isArray(o.personalLog)?o.personalLog:[];
   for(const k of Object.keys(a.pairs||{})){
     a.pairs[k]=(a.pairs[k]||[]).map(x=>a.normalizeCandidate(x));
@@ -720,7 +751,7 @@ function pushPlazaRecent(text){
   while(state.plazaRecent.length>state.settings.plazaRecentLimit)state.plazaRecent.shift();
 }
 function sourceLabel(s){
-  return({teach:"教師",learned:"学習",remix:"切り貼り",fallback:"初期返答",echo:"オウム返し",context:"会話補完"}[s]||s||"");
+  return({teach:"教師",human:"人間会話",learned:"学習",remix:"切り貼り",fallback:"初期返答",echo:"オウム返し",context:"会話補完"}[s]||s||"");
 }
 
 function renderAgents(){
@@ -738,7 +769,7 @@ function renderAgents(){
     </div>`;
     d.querySelector('[data-act="reset"]').onclick=()=>{
       if(confirm(`${a.name} の辞書と個人ログを消しますか？`)){
-        a.pairs={};a.vocab={};a.recent=[];a.dialogueContext=[];a.personalLog=[];a.stats={spoken:0,remix:0,echo:0,teach:0,context:0};
+        a.pairs={};a.vocab={};a.recent=[];a.dialogueContext=[];a.fallbackRecent=[];a.personalLog=[];a.stats={spoken:0,remix:0,echo:0,teach:0,context:0};
         save();renderAll();
       }
     };
@@ -864,6 +895,8 @@ function syncSettings(){
   document.getElementById("showSource").checked=s.showSource;
   document.getElementById("greetingRescue").checked=s.greetingRescue;
   document.getElementById("contextFallback").checked=s.contextFallback;
+  document.getElementById("humanTurnLearning").checked=s.humanTurnLearning;
+  document.getElementById("learnFallback").checked=s.learnFallback;
 }
 function renderAll(){renderAgents();renderPersonal();renderPlaza();renderTraits();renderStats();syncSettings()}
 
@@ -882,6 +915,8 @@ document.getElementById("blockChorus").onchange=e=>{state.settings.blockChorus=e
 document.getElementById("showSource").onchange=e=>{state.settings.showSource=e.target.checked;save();renderAll()};
 document.getElementById("greetingRescue").onchange=e=>{state.settings.greetingRescue=e.target.checked;save()};
 document.getElementById("contextFallback").onchange=e=>{state.settings.contextFallback=e.target.checked;save()};
+document.getElementById("humanTurnLearning").onchange=e=>{state.settings.humanTurnLearning=e.target.checked;save()};
+document.getElementById("learnFallback").onchange=e=>{state.settings.learnFallback=e.target.checked;save()};
 
 document.getElementById("addAgent").onclick=()=>{
   const name=norm(document.getElementById("newName").value);
@@ -900,9 +935,28 @@ document.getElementById("personalSend").onclick=()=>{
   const i=Number(document.getElementById("personalAgent").value||0);
   const a=state.agents[i],el=document.getElementById("personalInput"),text=norm(el.value);
   if(!a||!text)return;
+
+  // 今回の人間発言を、直前の人工無能発言への返答として覚える。
+  if(state.settings.humanTurnLearning){
+    for(let j=a.personalLog.length-1;j>=0;j--){
+      const prev=a.personalLog[j];
+      if(prev.who===a.name&&prev.text){
+        a.learnPair(prev.text,text,"human");
+        break;
+      }
+      if(prev.who==="あなた")break;
+    }
+  }
+
+  a.learnText(text);
   const out=a.reply(text);
   a.personalLog.push({who:"あなた",text},{who:a.name,text:out.text,source:out.source});
-  a.learnPair(text,out.text,out.source==="remix"?"remix":"learned");
+
+  // 会話補完は初期設定では自己学習しない。
+  if(out.source!=="context"||state.settings.learnFallback){
+    a.learnPair(text,out.text,out.source==="remix"?"remix":out.source==="context"?"context":"learned");
+  }
+
   el.value="";save();renderAll();
 };
 
@@ -950,10 +1004,10 @@ function plazaPost(text,who="あなた"){
     state.plazaLog.push({who:a.name,text:out.text,source:out.source});
     pushPlazaRecent(out.text);
 
-    if(state.settings.plazaLearn){
+    if(state.settings.plazaLearn&&(out.source!=="context"||state.settings.learnFallback)){
       const echo=similarity(text,out.text);
       if(echo<.94){
-        a.learnPair(text,out.text,out.source==="remix"?"remix":"learned");
+        a.learnPair(text,out.text,out.source==="remix"?"remix":out.source==="context"?"context":"learned");
       }
     }
     count++;
@@ -1012,8 +1066,8 @@ document.getElementById("autoTalk").onclick=async()=>{
       state.plazaLog.push({who:a.name,text:out.text,source:out.source});
       pushPlazaRecent(out.text);
 
-      if(state.settings.plazaLearn&&similarity(starter,out.text)<.94){
-        a.learnPair(starter,out.text,out.source==="remix"?"remix":"learned");
+      if(state.settings.plazaLearn&&(out.source!=="context"||state.settings.learnFallback)&&similarity(starter,out.text)<.94){
+        a.learnPair(starter,out.text,out.source==="remix"?"remix":out.source==="context"?"context":"learned");
       }
     });
 
@@ -1022,6 +1076,34 @@ document.getElementById("autoTalk").onclick=async()=>{
   }
 };
 document.getElementById("stopAuto").onclick=()=>{autoStop=true};
+
+document.getElementById("cleanFallback").onclick=()=>{
+  const exact=new Set([
+    "なるほど。","それで、どうなりましたか？","そうなんですか！","勢いがありますね。",
+    "びっくりしました。","そうですね。","どうしてでしょうね。","わかりません。",
+    "もう少し詳しく言ってください。","どういたしまして。","こちらこそ、ありがとう。"
+  ]);
+  let weakened=0,removed=0;
+  state.agents.forEach(a=>{
+    for(const [input,arr] of Object.entries(a.pairs)){
+      const next=[];
+      arr.map(x=>a.normalizeCandidate(x)).forEach(c=>{
+        const looksTopic=/について話しているんですね。$/.test(c.text);
+        if((exact.has(c.text)||looksTopic)&&c.kind!=="teach"&&c.kind!=="human"){
+          c.kind="context";
+          c.count=Math.min(1,c.count||1);
+          c.echoPenalty=Math.min(c.echoPenalty||1,.18);
+          weakened++;
+        }
+        if(c.text===input&&c.kind==="context"){removed++;continue}
+        next.push(c);
+      });
+      a.pairs[input]=next;
+    }
+  });
+  save();renderAll();
+  alert(`${weakened}件の補完由来候補を弱体化し、${removed}件を削除しました。`);
+};
 
 document.getElementById("cleanEcho").onclick=()=>{
   let n=0;
