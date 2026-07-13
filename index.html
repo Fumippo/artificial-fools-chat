@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>人工無能チャット v4.7</title>
+<title>人工無能チャット v4.8</title>
 <style>
 :root{
   --bg:#0f1319;--panel:#171d26;--panel2:#212936;--line:#344052;
@@ -43,7 +43,7 @@ textarea{min-height:58px;resize:vertical}
 .source{font-size:10px;padding:2px 6px;border-radius:999px;background:#334155;color:#dce6f2}
 .source.teach{background:#27563a}
 .source.remix{background:#654b21}
-.source.echo{background:#6b2f3a}.source.context{background:#29506b}.source.human{background:#4b6530}.source.phrase{background:#6b5329}
+.source.echo{background:#6b2f3a}.source.context{background:#29506b}.source.human{background:#4b6530}.source.phrase{background:#6b5329}.source.plazaPhrase{background:#355f55}
 .composer{padding:12px;border-top:1px solid var(--line);background:#151a22}
 .toolbar{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:8px}
 .toolbar button{font-size:12px}
@@ -74,7 +74,7 @@ textarea{min-height:58px;resize:vertical}
 <body>
 <div class="app">
 <aside>
-  <h1>人工無能チャット v4.7</h1>
+  <h1>人工無能チャット v4.8</h1>
   <div class="small">語録の突然変異は残し、全員唱和と同文連打だけ抑えます。完全に正常化したら、この企画の存在意義が蒸発します。</div>
 
   <div class="card">
@@ -119,6 +119,9 @@ textarea{min-height:58px;resize:vertical}
     <input id="contextLimit" type="range" min="1" max="10" value="4">
 
     <label class="toggle"><input id="humanTurnLearning" type="checkbox" checked> 次の人間発言から会話を学ぶ</label>
+    <label class="toggle"><input id="plazaPhraseLearning" type="checkbox" checked> 広場で聞いた発言を単語記憶へ追加</label>
+    <label>広場学習率 <span id="plazaLearnRateText">55%</span></label>
+    <input id="plazaLearnRate" type="range" min="10" max="100" value="55">
     <button id="cleanFallback" class="red" style="width:100%;margin-top:8px">旧会話補完汚染を完全削除</button>
 
     <label>広場の表示件数 <span id="displayLimitText">500</span></label>
@@ -541,12 +544,12 @@ class Agent{
       r-=Math.max(.01,x.score);
       if(r<=0){
         x.p.used=(x.p.used||0)+1;
-        return {text:x.p.text,source:"phrase"};
+        return {text:x.p.text,source:x.p.kind==="plaza"?"plazaPhrase":"phrase"};
       }
     }
     const p=pool[0].p;
     p.used=(p.used||0)+1;
-    return {text:p.text,source:"phrase"};
+    return {text:p.text,source:p.kind==="plaza"?"plazaPhrase":"phrase"};
   }
   normalizeCandidate(c){
     if(typeof c==="string")return{text:c,count:1,used:0,kind:"learned",echoPenalty:1,triggerIntent:null,triggerTopics:[]};
@@ -768,7 +771,7 @@ class Agent{
     if(out.source==="remix")this.stats.remix=(this.stats.remix||0)+1;
     if(out.source==="echo")this.stats.echo=(this.stats.echo||0)+1;
     if(out.source==="teach")this.stats.teach=(this.stats.teach||0)+1;
-    if(out.source==="phrase")this.stats.phrase=(this.stats.phrase||0)+1;
+    if(out.source==="phrase"||out.source==="plazaPhrase")this.stats.phrase=(this.stats.phrase||0)+1;
     return out;
   }
   distinctCount(){
@@ -871,7 +874,7 @@ function defaults(){
       echoPenalty:.95,plazaLearn:true,avoidExact:true,
       blockChorus:true,showSource:true,displayLimit:500,
       conversationStrength:.72,minRelevance:.22,contextLimit:4,
-      humanTurnLearning:true
+      humanTurnLearning:true,plazaPhraseLearning:true,plazaLearnRate:.55
     }
   };
 }
@@ -919,7 +922,7 @@ function pushPlazaRecent(text){
   while(state.plazaRecent.length>state.settings.plazaRecentLimit)state.plazaRecent.shift();
 }
 function sourceLabel(s){
-  return({teach:"教師",human:"人間会話",phrase:"単語記憶",learned:"学習",remix:"切り貼り",echo:"オウム返し"}[s]||s||"");
+  return({teach:"教師",human:"人間会話",phrase:"単語記憶",plazaPhrase:"広場学習",learned:"学習",remix:"切り貼り",echo:"オウム返し"}[s]||s||"");
 }
 
 function renderAgents(){
@@ -1030,9 +1033,12 @@ function renderStats(){
     広場学習: ${state.settings.plazaLearn?'ON':'OFF'}
   `;
 
-  let table='<table class="table"><tr><th>個体</th><th>異なる返答</th><th>発言</th><th>切り貼り</th><th>単語記憶</th><th>オウム</th><th>教師採用</th></tr>';
+  let table='<table class="table"><tr><th>個体</th><th>会話入力</th><th>返答候補</th><th>単語記憶数</th><th>発言</th><th>切り貼り</th><th>記憶使用</th></tr>';
   state.agents.forEach(a=>{
-    table+=`<tr><td>${esc(a.name)}</td><td>${a.distinctCount()}</td><td>${a.stats.spoken||0}</td><td>${a.stats.remix||0}</td><td>${a.stats.phrase||0}</td><td>${a.stats.echo||0}</td><td>${a.stats.teach||0}</td></tr>`;
+    const inputCount=Object.keys(a.pairs||{}).length;
+    const pairCount=Object.values(a.pairs||{}).reduce((s,arr)=>s+(arr||[]).length,0);
+    const phraseCount=(a.phrases||[]).length;
+    table+=`<tr><td>${esc(a.name)}</td><td>${inputCount}</td><td>${pairCount}</td><td>${phraseCount}</td><td>${a.stats.spoken||0}</td><td>${a.stats.remix||0}</td><td>${a.stats.phrase||0}</td></tr>`;
   });
   table+='</table>';
   document.getElementById("agentStats").innerHTML=table;
@@ -1054,7 +1060,8 @@ function syncSettings(){
     ["displayLimit",s.displayLimit||500,"displayLimitText",v=>v],
     ["conversationStrength",Math.round((s.conversationStrength||.72)*100),"conversationText",v=>v+"%"],
     ["minRelevance",Math.round((s.minRelevance||.22)*100),"relevanceText",v=>v+"%"],
-    ["contextLimit",s.contextLimit||4,"contextText",v=>v]
+    ["contextLimit",s.contextLimit||4,"contextText",v=>v],
+    ["plazaLearnRate",Math.round((s.plazaLearnRate||.55)*100),"plazaLearnRateText",v=>v+"%"]
   ];
   map.forEach(([id,val,tid,fmt])=>{document.getElementById(id).value=val;document.getElementById(tid).textContent=fmt(val)});
   document.getElementById("plazaLearn").checked=s.plazaLearn;
@@ -1062,6 +1069,7 @@ function syncSettings(){
   document.getElementById("blockChorus").checked=s.blockChorus;
   document.getElementById("showSource").checked=s.showSource;
   document.getElementById("humanTurnLearning").checked=s.humanTurnLearning;
+  document.getElementById("plazaPhraseLearning").checked=s.plazaPhraseLearning!==false;
 }
 function renderAll(){renderAgents();renderPersonal();renderPlaza();renderTraits();renderStats();syncSettings()}
 
@@ -1080,6 +1088,11 @@ document.getElementById("avoidExact").onchange=e=>{state.settings.avoidExact=e.t
 document.getElementById("blockChorus").onchange=e=>{state.settings.blockChorus=e.target.checked;save()};
 document.getElementById("showSource").onchange=e=>{state.settings.showSource=e.target.checked;save();renderAll()};
 document.getElementById("humanTurnLearning").onchange=e=>{state.settings.humanTurnLearning=e.target.checked;save()};
+document.getElementById("plazaPhraseLearning").onchange=e=>{state.settings.plazaPhraseLearning=e.target.checked;save()};
+document.getElementById("plazaLearnRate").oninput=e=>{
+  state.settings.plazaLearnRate=Number(e.target.value)/100;
+  save();renderAll();
+};
 
 document.getElementById("addAgent").onclick=()=>{
   const name=norm(document.getElementById("newName").value);
@@ -1194,11 +1207,37 @@ document.getElementById("saveTraits").onclick=()=>{
   save();renderAll();
 };
 
+
+function absorbPlazaUtterance(text,speakerName){
+  text=norm(text);
+  if(!state.settings.plazaPhraseLearning||!text||isFallbackPollution(text))return 0;
+
+  let added=0;
+  const base=Math.max(.1,Math.min(1,Number(state.settings.plazaLearnRate||.55)));
+
+  state.agents.forEach(a=>{
+    if(a.name===speakerName)return;
+
+    const trait=Math.min(1.35,Math.max(.25,a.traitMultiplier(text)));
+    const chance=Math.min(.98,base*trait);
+    if(Math.random()>chance)return;
+
+    const existed=(a.phrases||[]).some(p=>p.text===text);
+    a.learnPhrase(text,"plaza");
+    const p=(a.phrases||[]).find(x=>x.text===text);
+    if(p&&p.kind!=="teach"&&p.kind!=="human")p.kind="plaza";
+    if(!existed)added++;
+  });
+
+  return added;
+}
+
 function plazaPost(text,who="あなた"){
   text=norm(text);if(!text)return;
   state.turn++;
   state.plazaLog.push({who,text});
   pushPlazaRecent(text);
+  absorbPlazaUtterance(text,who);
   let count=0,spokenThisTurn=new Set([text]);
 
   [...state.agents].sort(()=>Math.random()-.5).forEach(a=>{
@@ -1215,6 +1254,7 @@ function plazaPost(text,who="あなた"){
     spokenThisTurn.add(out.text);
     state.plazaLog.push({who:a.name,text:out.text,source:out.source});
     pushPlazaRecent(out.text);
+    absorbPlazaUtterance(out.text,a.name);
 
     if(state.settings.plazaLearn&&out.source!=="context"&&!isFallbackPollution(text)&&!isFallbackPollution(out.text)){
       const echo=similarity(text,out.text);
@@ -1261,9 +1301,13 @@ document.getElementById("autoTalk").onclick=async()=>{
     if(fresh.length)starter=rand(fresh);
 
     speaker.remember(starter);
-    const starterSource=(speaker.phrases||[]).some(p=>p.text===starter)?"phrase":"learned";
+    const starterPhrase=(speaker.phrases||[]).find(p=>p.text===starter);
+    const starterSource=starterPhrase
+      ?(starterPhrase.kind==="plaza"?"plazaPhrase":"phrase")
+      :"learned";
     state.plazaLog.push({who:speaker.name,text:starter,source:starterSource});
     pushPlazaRecent(starter);
+    absorbPlazaUtterance(starter,speaker.name);
 
     const spokenThisTurn=new Set([starter]);
     [...state.agents].filter(a=>a!==speaker).sort(()=>Math.random()-.5).forEach(a=>{
@@ -1280,6 +1324,7 @@ document.getElementById("autoTalk").onclick=async()=>{
       spokenThisTurn.add(out.text);
       state.plazaLog.push({who:a.name,text:out.text,source:out.source});
       pushPlazaRecent(out.text);
+      absorbPlazaUtterance(out.text,a.name);
 
       if(state.settings.plazaLearn&&out.source!=="context"&&!isFallbackPollution(starter)&&!isFallbackPollution(out.text)&&similarity(starter,out.text)<.94){
         a.learnPair(starter,out.text,out.source==="remix"?"remix":"learned");
